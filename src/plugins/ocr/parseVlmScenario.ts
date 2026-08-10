@@ -1,6 +1,6 @@
 /**
  * VLM 返回文本 → ScenarioResult 解析（纯函数，无原生依赖，可单测）。
- * 从 CloudVlmOcrPlugin 抽出，保持行为不变。
+ * Malformed responses return null so callers can surface a typed cloud error.
  */
 import { ScenarioResult } from '../types';
 import { MenuData, MenuDish } from '../../core/types';
@@ -69,15 +69,8 @@ export function parseVlmScenarioResult(rawText: string): ScenarioResult | null {
       };
     }
   } catch {
-    // 非严格 JSON 文本，包裹为完整解读返回
+    return null;
   }
 
-  return {
-    title: '场景解读',
-    category: 'SCENE',
-    originalText: rawText,
-    translatedText: rawText,
-    tips: ['来自场景图像分析'],
-    recommendedPhrases: [],
-  };
+  return null;
 }

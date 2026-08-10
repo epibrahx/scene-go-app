@@ -12,10 +12,7 @@ Built with Expo / React Native. Client-only: no backend required.
 - **Realtime speech transcription** — native iOS `SFSpeechRecognizer` bridge (Expo Local Module) with live transcript banner and auto-archiving to notes.
 - **Quick notes** — vouchers, Wi-Fi passwords, refund numbers; persist across launches, one-tap copy, fullscreen large-type display, and voice-memo auto-archive.
 - **Session history** — past snapshot conversations are saved locally (AsyncStorage) and restorable.
-- **Plugin architecture** — OCR / matcher / speech engines are pluggable:
-  - Cloud OCR: OpenRouter vision models (`openrouter/free`)
-  - Local matcher: keyword dictionary with Chinese/English/Thai/Japanese coverage
-  - Optional on-device: Qwen2.5-0.5B (llama.rn) and Whisper-Tiny (whisper.rn)
+- **Cloud recognition** — OpenRouter vision models return structured scene and expression-card data; failures surface as typed errors.
 
 ## Screens
 
@@ -43,16 +40,13 @@ Built with Expo / React Native. Client-only: no backend required.
 │      ├── InsightView (照片+横滑表达卡)     │
 │      ├── PresentationModal (全屏展示)      │
 │      └── expressionEngine ── plugins/       │
-│          ├── CloudVlmOcrPlugin (OpenRouter) │
-│          ├── LocalDictMatcherPlugin(offline)│
-│          ├── QwenLocalPlugin / WhisperSpeech│
-│          └── PluginManager (pipeline)       │
+│          └── CloudVlmOcrPlugin (OpenRouter) │
 │  modules/scenego-speech (Swift,             │
 │      SFSpeechRecognizer Local Module)       │
 └────────────────────────────────────────────┘
 ```
 
-Recognition pipeline: snapshot → plugin pipeline (`recognizeText` → `match`) → structured `ScenarioResult` → expression card (+ insight phrase row).
+Recognition pipeline: snapshot → cloud recognition → structured `ScenarioResult` → expression card (+ insight phrase row).
 
 ## Quick Start
 
@@ -78,7 +72,7 @@ Create a `.env` file (`.env.example` committed as a template):
 EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-The API key is also configurable in-app (Settings → 识别引擎设置), stored in the iOS Keychain.
+The API key is supplied at build time through `EXPO_PUBLIC_OPENROUTER_API_KEY`.
 
 ## Project Layout
 
@@ -94,11 +88,11 @@ scenego/
 ├── src/
 │   ├── components/             # MainPage, ActionCard, InsightView,
 │   │                           # PresentationModal, SettingsSheet
-│   ├── plugins/                # OCR / matcher / speech plugins
-│   │   ├── PluginManager.ts    # pipeline: recognize → match
-│   │   └── ocr/ matchers/ speech/
+│   ├── plugins/                # Cloud recognition integration
+│   │   ├── PluginManager.ts    # cloud recognition facade
+│   │   └── ocr/
 │   └── utils/                  # NativeSpeech, SessionStore, NoteStore,
-│                               # SecureConfig (Keychain), ApiLogger
+│                               # SecureConfig (build env), ApiLogger
 ├── ios/                        # Expo prebuild output (custom native)
 ├── docs/                       # PRD, architecture, strategy
 └── .env.example                # env template
@@ -111,7 +105,7 @@ scenego/
 ## Tech Stack
 
 - Expo SDK 51 / React Native 0.74 (TypeScript)
-- expo-modules-core (Swift local module), expo-camera, expo-speech, expo-clipboard, expo-secure-store
+- expo-modules-core (Swift local module), expo-camera, expo-speech, expo-location, expo-file-system
 - AsyncStorage (sessions & notes)
 - OpenRouter chat completions API for vision
 

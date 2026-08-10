@@ -6,7 +6,7 @@
 
 ## 项目
 
-- Expo / React Native 应用（TypeScript），iOS + Android，含本地 LLM 能力（llama.rn、whisper.rn）
+- Expo / React Native 应用（TypeScript），iOS + Android，云端 AI + iOS 原生语音识别
 - 提交信息使用 **中文描述** 的 Conventional Commits，沿用仓库现有风格
 - 远程仓库：`dotsoy/scene-go-app`
 

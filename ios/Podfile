@@ -80,20 +80,6 @@ target 'SceneGo' do
       end
     end
 
-    # Patch expo-device UIDevice.swift: TARGET_OS_SIMULATOR 宏在 Xcode 16+ Swift 中不可见，改用 targetEnvironment 条件编译
-    uid_device_swift = File.join(__dir__, '../node_modules/expo-device/ios/UIDevice.swift')
-    if File.exist?(uid_device_swift)
-      File.chmod(0644, uid_device_swift)
-      content = File.read(uid_device_swift)
-      if content.include?('return TARGET_OS_SIMULATOR != 0')
-        patched = content.sub(
-          'return TARGET_OS_SIMULATOR != 0',
-          "#if targetEnvironment(simulator)\n    return true\n    #else\n    return false\n    #endif"
-        )
-        File.write(uid_device_swift, patched)
-      end
-    end
-
     # Patch expo-dev-menu DevMenuViewController.swift: TARGET_IPHONE_SIMULATOR 宏
     # 在 Xcode 16+/iOS 18+ SDK 的 Swift 中已移除，改用 targetEnvironment 条件编译
     dev_menu_swift = File.join(__dir__, '../node_modules/expo-dev-menu/ios/DevMenuViewController.swift')

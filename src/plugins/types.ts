@@ -1,4 +1,4 @@
-import { MenuDish, MenuData } from '../core/types';
+import { MenuData } from '../core/types';
 
 export interface OcrResult {
   rawText: string;
@@ -34,22 +34,8 @@ export interface OcrPlugin {
   recognizeText(imageUri: string, location?: string): Promise<OcrResult>;
 }
 
-export interface MatcherPlugin {
-  id: string;
-  name: string;
-  description: string;
-  match(text: string, location?: string): Promise<ScenarioResult>;
-}
-
 /** 多轮对话中的一轮问答（供云端 VLM 追问会话使用） */
 export interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
-}
-
-export interface SpeechPlugin {
-  id: string;
-  name: string;
-  description: string;
-  transcribe(audioFilePath: string): Promise<string>;
 }

@@ -226,10 +226,6 @@ PODS:
     - ExpoModulesCore
     - ZXingObjC/OneD
     - ZXingObjC/PDF417
-  - ExpoClipboard (6.0.3):
-    - ExpoModulesCore
-  - ExpoDevice (6.0.2):
-    - ExpoModulesCore
   - ExpoFileSystem (17.0.1):
     - ExpoModulesCore
   - ExpoFont (12.0.10):
@@ -239,8 +235,6 @@ PODS:
     - ExpoModulesCore
     - SDWebImageWebPCoder
   - ExpoKeepAwake (13.0.2):
-    - ExpoModulesCore
-  - ExpoLinearGradient (13.0.2):
     - ExpoModulesCore
   - ExpoModulesCore (1.12.26):
     - DoubleConversion
@@ -265,10 +259,6 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - ExpoSecureStore (13.0.2):
-    - ExpoModulesCore
-  - ExpoSharing (12.0.1):
-    - ExpoModulesCore
   - ExpoSpeech (12.0.2):
     - ExpoModulesCore
   - EXUpdatesInterface (0.16.2):
@@ -291,29 +281,6 @@ PODS:
   - libwebp/sharpyuv (1.6.0)
   - libwebp/webp (1.6.0):
     - libwebp/sharpyuv
-  - llama-rn (0.12.8):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.01.01.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React
-    - React-callinvoker
-    - React-Codegen
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
   - RCT-Folly (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -1242,10 +1209,6 @@ PODS:
   - React-Mapbuffer (0.74.5):
     - glog
     - React-debug
-  - react-native-text-recognition (1.0.2):
-    - React-Core
-  - react-native-view-shot (3.8.0):
-    - React-Core
   - React-nativeconfig (0.74.5)
   - React-NativeModulesApple (0.74.5):
     - glog
@@ -1484,29 +1447,6 @@ PODS:
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.0)
-  - whisper-rn (0.7.2):
-    - DoubleConversion
-    - glog
-    - hermes-engine
-    - RCT-Folly (= 2024.01.01.00)
-    - RCTRequired
-    - RCTTypeSafety
-    - React
-    - React-callinvoker
-    - React-Codegen
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-rendererdebug
-    - React-utils
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - Yoga
   - Yoga (0.0.0)
   - ZXingObjC/Core (3.6.9)
   - ZXingObjC/OneD (3.6.9):
@@ -1529,23 +1469,17 @@ DEPENDENCIES:
   - expo-dev-menu-interface (from `../node_modules/expo-dev-menu-interface/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoCamera (from `../node_modules/expo-camera/ios`)
-  - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
-  - ExpoDevice (from `../node_modules/expo-device/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoImageManipulator (from `../node_modules/expo-image-manipulator/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
-  - ExpoLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
-  - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
-  - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSpeech (from `../node_modules/expo-speech/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
-  - llama-rn (from `../node_modules/llama.rn`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -1572,8 +1506,6 @@ DEPENDENCIES:
   - React-jsitracing (from `../node_modules/react-native/ReactCommon/hermes/executor/`)
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
-  - react-native-text-recognition (from `../node_modules/react-native-text-recognition`)
-  - react-native-view-shot (from `../node_modules/react-native-view-shot`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -1599,7 +1531,6 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - SceneGoSpeech (from `../modules/scenego-speech/ios`)
-  - whisper-rn (from `../node_modules/whisper.rn`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1639,10 +1570,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-asset/ios"
   ExpoCamera:
     :path: "../node_modules/expo-camera/ios"
-  ExpoClipboard:
-    :path: "../node_modules/expo-clipboard/ios"
-  ExpoDevice:
-    :path: "../node_modules/expo-device/ios"
   ExpoFileSystem:
     :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
@@ -1651,14 +1578,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-image-manipulator/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo-keep-awake/ios"
-  ExpoLinearGradient:
-    :path: "../node_modules/expo-linear-gradient/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
-  ExpoSecureStore:
-    :path: "../node_modules/expo-secure-store/ios"
-  ExpoSharing:
-    :path: "../node_modules/expo-sharing/ios"
   ExpoSpeech:
     :path: "../node_modules/expo-speech/ios"
   EXUpdatesInterface:
@@ -1672,8 +1593,6 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2024-06-28-RNv0.74.3-7bda0c267e76d11b68a585f84cfdd65000babf85
-  llama-rn:
-    :path: "../node_modules/llama.rn"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -1722,10 +1641,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/logger"
   React-Mapbuffer:
     :path: "../node_modules/react-native/ReactCommon"
-  react-native-text-recognition:
-    :path: "../node_modules/react-native-text-recognition"
-  react-native-view-shot:
-    :path: "../node_modules/react-native-view-shot"
   React-nativeconfig:
     :path: "../node_modules/react-native/ReactCommon"
   React-NativeModulesApple:
@@ -1776,8 +1691,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   SceneGoSpeech:
     :path: "../modules/scenego-speech/ios"
-  whisper-rn:
-    :path: "../node_modules/whisper.rn"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -1796,16 +1709,11 @@ SPEC CHECKSUMS:
   expo-dev-menu-interface: 5c6b79875bf0ab1251ea9962f60968fe39ed2637
   ExpoAsset: 286fee7ba711ce66bf20b315e68106b13b8629fc
   ExpoCamera: cf49d2d121a9f883be0f98dde15a2185a1dd42be
-  ExpoClipboard: 243e22ff4161bbffcd3d2db469ae860ddc1156be
-  ExpoDevice: 84b3ed79df1234c17edfbf335f6ecf3c636f74de
   ExpoFileSystem: 2988caaf68b7cb706e36d382829d99811d9d76a5
   ExpoFont: 38dddf823e32740c2a9f37c926a33aeca736b5c4
   ExpoImageManipulator: eb92d3ac4bad0fe96258f17273b9e295e87447be
   ExpoKeepAwake: dd02e65d49f1cfd9194640028ae2857e536eb1c9
-  ExpoLinearGradient: 4c44b3803b441724874b232e6520b51ca6a50db1
   ExpoModulesCore: 9ac73e2f60e0ea1d30137ca96cfc8c2aa34ef2b2
-  ExpoSecureStore: 6506992a9f53c94ea716c54d4a63144965945c2c
-  ExpoSharing: 5e6b6cbc0c232084b79ffa7243459f7dcdc5b1cb
   ExpoSpeech: f17507715159aac594682a91239c53ab4593329f
   EXUpdatesInterface: c3a9494c2173db6442c7d5ad4e5b984972760fd3
   FBLazyVector: ac12dc084d1c8ec4cc4d7b3cf1b0ebda6dab85af
@@ -1813,7 +1721,6 @@ SPEC CHECKSUMS:
   glog: fdfdfe5479092de0c4bdbebedd9056951f092c4f
   hermes-engine: 8c1577f3fdb849cbe7729c2e7b5abc4b845e88f8
   libwebp: af5937a13536ef73f3784d69cc342b98961acf33
-  llama-rn: a30383ddd710183b6205972677b4e21d09847140
   RCT-Folly: 5dc73daec3476616d19e8a53f0156176f7b55461
   RCTDeprecation: 3afceddffa65aee666dafd6f0116f1d975db1584
   RCTRequired: ec1239bc9d8bf63e10fb92bd8b26171a9258e0c1
@@ -1838,8 +1745,6 @@ SPEC CHECKSUMS:
   React-jsitracing: f8367edacc50bb3f9f056a5aeafb8cee5849fafb
   React-logger: 780b9ee9cec7d44eabc4093de90107c379078cb6
   React-Mapbuffer: f544f00b98dbdd8cbae96dd2bdb8b47f719976e0
-  react-native-text-recognition: 2f93fddd03668fc4011dfdb1895324c710a026ca
-  react-native-view-shot: d1a701eb0719c6dccbd20b4bb43b1069f304cb70
   React-nativeconfig: ba9a2e54e2f0882cf7882698825052793ed4c851
   React-NativeModulesApple: 84aaad2b0e546d7b839837ca537f6e72804a4cad
   React-perflogger: ed4e0c65781521e0424f2e5e40b40cc7879d737e
@@ -1868,10 +1773,9 @@ SPEC CHECKSUMS:
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
-  whisper-rn: 6870c663a6ef88da6f3538ff572637f70ecb4d2c
   Yoga: 950bbfd7e6f04790fdb51149ed51df41f329fcc8
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 7758b7dd25d81d9879b37d48ee6980ea623b8781
+PODFILE CHECKSUM: 22f232e68e2fa215a61b191345c417effc65bdc2
 
 COCOAPODS: 1.17.0

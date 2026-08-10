@@ -1,9 +1,9 @@
 import { OcrPlugin, OcrResult, ScenarioResult, ChatTurn } from '../types';
-import { getOpenRouterApiKey } from '../../utils/SecureConfig';
 import { getCachedSettings } from '../../utils/appSettings';
-import { chatCompletions, AiChatMessage } from '../../utils/aiGateway';
+import { AiGatewayError, chatCompletions, AiChatMessage } from '../../utils/aiGateway';
 import * as FileSystem from 'expo-file-system';
 import { parseVlmScenarioResult } from './parseVlmScenario';
+import { AppError } from '../../errors/AppError';
 
 export { parseVlmScenarioResult } from './parseVlmScenario';
 
@@ -42,7 +42,6 @@ const CARD_SYSTEM_PROMPT = `你是 SceneGo 出行助手。用户正在异国旅�
   "phrases": ["备用表达1（目标语言，括号内中文翻译）", "备用表达2（目标语言，括号内中文翻译）", "备用表达3（目标语言，括号内中文翻译）"]
 }`;
 
-/** 安全转换图片为 Base64 字符串（具备 FileSystem 原生模块 + Fetch Blob 双层降级） */
 async function convertImageToBase64(imageUri: string): Promise<string> {
   try {
     if (FileSystem?.readAsStringAsync) {
@@ -51,10 +50,9 @@ async function convertImageToBase64(imageUri: string): Promise<string> {
       });
     }
   } catch {
-    // 忽略原生模块加载错误，自动走下方的 Fetch Blob 降级方案
+    // 忽略原生模块加载错误
   }
 
-  // 纯 JS 降级方案：100% 兼容 Web / Expo Go / 未编译原生 Bundle
   const res = await fetch(imageUri);
   const blob = await res.blob();
   return new Promise<string>((resolve, reject) => {
@@ -69,7 +67,6 @@ async function convertImageToBase64(imageUri: string): Promise<string> {
   });
 }
 
-/** 构造场景识别消息（图片 + 位置提示；目标语言来自设置面板） */
 function buildSceneMessages(base64: string, location?: string) {
   const s = getCachedSettings();
   const userText = location
@@ -79,7 +76,7 @@ function buildSceneMessages(base64: string, location?: string) {
     messages: [
       {
         role: 'system',
-        content: `${SCENE_SYSTEM_PROMPT}\n当前设定目标语言：${s.targetLang}（languageCode 必须为 ${s.targetLangCode}，recommendedPhrases / targetText 用该语言输出）。`,
+        content: `${SCENE_SYSTEM_PROMPT}\n当前设定目标语言：${s.targetLanguage.name}（languageCode 必须为 ${s.targetLanguage.code}，recommendedPhrases / targetText 用该语言输出）。`,
       },
       {
         role: 'user',
@@ -99,7 +96,6 @@ function buildSceneMessages(base64: string, location?: string) {
   };
 }
 
-/** 构造多轮追问消息：首轮带图，后续轮携带纯文本历史问答 */
 function buildFollowUpMessages(base64: string, question: string, history: ChatTurn[] = []) {
   const messages: AiChatMessage[] = [
     {
@@ -114,7 +110,6 @@ function buildFollowUpMessages(base64: string, question: string, history: ChatTu
   ];
 
   if (history.length === 0) {
-    // 单轮：图 + 当前问题
     messages.push({
       role: 'user',
       content: [
@@ -123,7 +118,6 @@ function buildFollowUpMessages(base64: string, question: string, history: ChatTu
       ],
     });
   } else {
-    // 多轮：图片挂到历史首问，后续轮次纯文本，保持同一会话语境
     messages.push({
       role: 'user',
       content: [
@@ -145,231 +139,126 @@ export class CloudVlmOcrPlugin implements OcrPlugin {
   name = '云端视觉识别';
   description = '通过 OpenRouter 识别摄像头画面场景';
 
-  async recognizeText(imageUri: string, location?: string): Promise<OcrResult> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) {
-      return {
-        rawText: '',
-        lines: ['[未配置 API Key，请在设置中填入]'],
-        confidence: 0,
-      };
-    }
-
+  async recognizeText(imageUri: string, location?: string, signal?: AbortSignal): Promise<OcrResult> {
     const startTime = Date.now();
+    const base64 = await convertImageToBase64(imageUri);
+    const req = buildSceneMessages(base64, location);
+    const result = await chatCompletions({
+      messages: req.messages,
+      maxTokens: req.maxTokens,
+      logLabel: '[Scene OCR]',
+      signal,
+    });
 
-    try {
-      const base64 = await convertImageToBase64(imageUri);
-      const req = buildSceneMessages(base64, location);
-
-      const result = await chatCompletions({
-        messages: req.messages,
-        maxTokens: req.maxTokens,
-        model: getCachedSettings().model,
-        logLabel: '[Scene OCR]',
-      });
-
-      const durationMs = Date.now() - startTime;
-      console.log(`[CloudVlm] 响应 (${result.status}, ${durationMs}ms)`);
-      if (result.content) console.log(result.content.slice(0, 200));
-
-      if (!result.ok) {
-        console.warn('[CloudVlm API Error]:', result.status, result.text);
-        if (result.status === 401) {
-          return {
-            rawText: result.text,
-            lines: [`[API Key 鉴权失败 (${result.status})，请在设置中确认你的 Key 是否有效]`],
-            confidence: 0,
-          };
-        }
-        if (result.status === 0) {
-          return {
-            rawText: result.text,
-            lines: [`[网络异常，请检查网络连接]`],
-            confidence: 0,
-          };
-        }
-        return {
-          rawText: result.text,
-          lines: [`[云端识别失败: HTTP ${result.status}]`],
-          confidence: 0,
-        };
-      }
-
-      return { rawText: result.content ?? '', lines: [result.content ?? ''], confidence: 1.0 };
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn('[CloudVlm Fetch Network Error]:', errMsg);
-      return {
-        rawText: '',
-        lines: [`[网络异常: ${errMsg}]`],
-        confidence: 0,
-      };
-    }
+    console.log(`[CloudVlm] 响应 (${result.status}, ${Date.now() - startTime}ms)`);
+    return { rawText: result.content, lines: [result.content], confidence: 1.0 };
   }
 
-  /** 多轮追问：用户基于当前照片提出具体问题（history 携带此前问答，首轮自动带图） */
-  async askFollowUp(imageUri: string, question: string, history: ChatTurn[] = []): Promise<string> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) return '请先配置 API Key';
-
-    try {
-      const base64 = await convertImageToBase64(imageUri);
-      const req = buildFollowUpMessages(base64, question, history);
-
-      const result = await chatCompletions({
-        messages: req.messages,
-        maxTokens: req.maxTokens,
-        model: getCachedSettings().model,
-        logLabel: `[Follow-Up]: ${question}\n[History]: ${history.length} turns`,
-      });
-
-      if (!result.ok) return `响应错误 (${result.status}): ${result.text}`;
-      return result.content ?? result.text;
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : '请检查网络连接';
-      return `网络错误: ${errMsg}`;
-    }
+  async askFollowUp(imageUri: string, question: string, history: ChatTurn[] = [], signal?: AbortSignal): Promise<string> {
+    const base64 = await convertImageToBase64(imageUri);
+    const req = buildFollowUpMessages(base64, question, history);
+    const result = await chatCompletions({
+      messages: req.messages,
+      maxTokens: req.maxTokens,
+      logLabel: `[Follow-Up]: ${question}\n[History]: ${history.length} turns`,
+      signal,
+    });
+    return result.content;
   }
 
-  /** 文本驱动的动态表达卡：用户一句话描述需求（语音转写/手打）→ VLM 生成当地语言表达卡 */
-  async generateCardFromText(text: string, location?: string): Promise<ScenarioResult | null> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) return null;
-
+  async generateCardFromText(text: string, location?: string, signal?: AbortSignal): Promise<ScenarioResult> {
     const s = getCachedSettings();
-    try {
-      const userContent = location
-        ? `${text}\n\n（用户当前所在位置：${location}，生成卡片请使用当地语言）`
-        : text;
-
-      const result = await chatCompletions({
-        messages: [
-          {
-            role: 'system',
-            content: `${CARD_SYSTEM_PROMPT}\n当前设定目标语言：${s.targetLang}（languageCode 必须为 ${s.targetLangCode}）。`,
-          },
-          { role: 'user', content: userContent },
-        ],
-        maxTokens: 512,
-        model: s.model,
-        logLabel: `[Card From Text]: ${text}`,
-      });
-
-      if (!result.ok || result.status === 0) return null;
-      const parsed = parseVlmScenarioResult(result.content ?? '');
-      if (!parsed) return null;
-      // 语言防御：模型输出语言与设置不符时自动重译为目标语言（openrouter/free 等小模型可能不遵守语言约束）
-      return this.enforceTargetLanguage(parsed, s.targetLang, s.targetLangCode, text);
-    } catch (err: unknown) {
-      // 网络/解析异常上抛给 UI（展示「网络或服务暂时不可用 + 重试」）；无 Key 路径在上面已短路
-      console.warn('[Card Generate Error]:', err);
-      throw err;
-    }
+    const userContent = location
+      ? `${text}\n\n（用户当前所在位置：${location}，生成卡片请使用当地语言）`
+      : text;
+    const result = await chatCompletions({
+      messages: [
+        {
+          role: 'system',
+          content: `${CARD_SYSTEM_PROMPT}\n当前设定目标语言：${s.targetLanguage.name}（languageCode 必须为 ${s.targetLanguage.code}）。`,
+        },
+        { role: 'user', content: userContent },
+      ],
+      maxTokens: 512,
+      logLabel: `[Card From Text]: ${text}`,
+      signal,
+    });
+    const parsed = parseVlmScenarioResult(result.content);
+    if (!parsed) throw new AppError('invalid-response', '云端未返回有效表达卡');
+    return this.enforceTargetLanguage(parsed, s.targetLanguage.name, s.targetLanguage.code, text, signal);
   }
 
-  /** 聆听对方（mic ambient）：对方当地语言发言 → 一张合并回复卡（外语回复 + 母语译文） */
-  async generateReplyCard(text: string, location?: string): Promise<ScenarioResult | null> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) return null;
+  async generateReplyCard(text: string, location?: string, signal?: AbortSignal): Promise<ScenarioResult> {
     const s = getCachedSettings();
-    try {
-      const userContent = location
-        ? `对方用当地语言对我说了这句话：\n「${text}」\n（用户当前所在位置：${location}）\n\n请生成一张递给对方看的回复卡。`
-        : `对方用当地语言对我说了这句话：\n「${text}」\n\n请生成一张递给对方看的回复卡。`;
-      const result = await chatCompletions({
-        messages: [
-          {
-            role: 'system',
-            content: `你是 SceneGo 出行助手。对方用当地语言对你说了一段话，你需要回话。
+    const userContent = location
+      ? `对方用当地语言对我说了这句话：\n「${text}」\n（用户当前所在位置：${location}）\n\n请生成一张递给对方看的回复卡。`
+      : `对方用当地语言对我说了这句话：\n「${text}」\n\n请生成一张递给对方看的回复卡。`;
+    const result = await chatCompletions({
+      messages: [
+        {
+          role: 'system',
+          content: `你是 SceneGo 出行助手。对方用当地语言对你说了一段话，你需要回话。
 严格以如下 JSON 格式回复（不要输出任何其他内容）：
 {
   "title": "中文标题（如：回应对方）",
   "category": "场景分类（RESTAURANT / TRANSPORT / SHOPPING / HOTEL / OTHER）",
-  "targetText": "递给对方看的当地语言回复（目标语言：${s.targetLang}）",
+  "targetText": "递给对方看的当地语言回复（目标语言：${s.targetLanguage.name}）",
   "subText": "这句回复的中文译文，并简要说明对方说了什么（供用户理解）",
   "localTip": "中文惯例提示（可选，如小费/礼貌用语）",
-  "languageCode": "${s.targetLangCode}"
+  "languageCode": "${s.targetLanguage.code}"
 }`,
-          },
-          { role: 'user', content: userContent },
-        ],
-        maxTokens: 512,
-        model: s.model,
-        logLabel: `[Reply Card]: ${text}`,
-      });
-      if (!result.ok || result.status === 0) return null;
-      const parsed = parseVlmScenarioResult(result.content ?? '');
-      if (!parsed) return null;
-      return this.enforceTargetLanguage(parsed, s.targetLang, s.targetLangCode, text);
-    } catch (err: unknown) {
-      console.warn('[Reply Card Error]:', err);
-      throw err;
-    }
+        },
+        { role: 'user', content: userContent },
+      ],
+      maxTokens: 512,
+      logLabel: `[Reply Card]: ${text}`,
+      signal,
+    });
+    const parsed = parseVlmScenarioResult(result.content);
+    if (!parsed) throw new AppError('invalid-response', '云端未返回有效回复卡');
+    return this.enforceTargetLanguage(parsed, s.targetLanguage.name, s.targetLanguage.code, text, signal);
   }
 
-  /** 听对方说话：当地语言发言 → 用户语言一行译文（失败返回 null，UI 显示兜底） */
-  async translateUtterance(text: string, lang?: string): Promise<string | null> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) return null;
+  async translateUtterance(text: string, lang?: string, signal?: AbortSignal): Promise<string> {
     const target = lang === 'en-US' ? '英语' : '简体中文';
-    try {
-      const result = await chatCompletions({
-        messages: [
-          {
-            role: 'system',
-            content: `你是出行翻译助手。把用户的当地语言发言翻译成${target}。只输出一行译文，不要任何其他内容。`,
-          },
-          { role: 'user', content: text },
-        ],
-        maxTokens: 256,
-        model: getCachedSettings().model,
-        logLabel: '[Listen Translate]',
-      });
-      if (!result.ok || result.status === 0) return null;
-      const content = (result.content ?? '').trim();
-      return content || null;
-    } catch (err: unknown) {
-      console.warn('[Listen Translate Error]:', err);
-      return null;
-    }
+    const result = await chatCompletions({
+      messages: [
+        {
+          role: 'system',
+          content: `你是出行翻译助手。把用户的当地语言发言翻译成${target}。只输出一行译文，不要任何其他内容。`,
+        },
+        { role: 'user', content: text },
+      ],
+      maxTokens: 256,
+      logLabel: '[Listen Translate]',
+      signal,
+    });
+    return result.content.trim();
   }
 
-  /** 把句子重译为目标语言（语言防御：free 模型可能不遵守语言约束，校验不符时用此兜底） */
-  async translateToTarget(text: string, langName: string, langCode: string): Promise<string | null> {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) return null;
-    try {
-      const result = await chatCompletions({
-        messages: [
-          {
-            role: 'system',
-            content: `你是出行翻译助手。把下面的句子翻译成${langName}（语言代码 ${langCode}）。只输出一行${langName}译文，不要任何其他内容。`,
-          },
-          { role: 'user', content: text },
-        ],
-        maxTokens: 256,
-        model: getCachedSettings().model,
-        logLabel: '[Language Fix]',
-      });
-      if (!result.ok || result.status === 0) return null;
-      const content = (result.content ?? '').trim();
-      return content || null;
-    } catch (err: unknown) {
-      console.warn('[Language Fix Error]:', err);
-      return null;
-    }
+  async translateToTarget(text: string, langName: string, langCode: string, signal?: AbortSignal): Promise<string> {
+    const result = await chatCompletions({
+      messages: [
+        {
+          role: 'system',
+          content: `你是出行翻译助手。把下面的句子翻译成${langName}（语言代码 ${langCode}）。只输出一行${langName}译文，不要任何其他内容。`,
+        },
+        { role: 'user', content: text },
+      ],
+      maxTokens: 256,
+      logLabel: '[Language Fix]',
+      signal,
+    });
+    return result.content.trim();
   }
 
-  /** 语言防御：模型输出的 languageCode 与设置不符时，重译 targetText 为目标语言（保证卡片第一行是目标语言） */
-  private async enforceTargetLanguage(parsed: ScenarioResult, langName: string, langCode: string, fallbackSource: string): Promise<ScenarioResult> {
+  private async enforceTargetLanguage(parsed: ScenarioResult, langName: string, langCode: string, fallbackSource: string, signal?: AbortSignal): Promise<ScenarioResult> {
     if (parsed.languageCode && parsed.languageCode === langCode) return parsed;
     const source = parsed.targetText || parsed.translatedText || fallbackSource;
-    const fixed = await this.translateToTarget(source, langName, langCode);
-    if (fixed) {
-      console.warn(`[Language Fix] 模型输出语言 ${parsed.languageCode ?? '未知'} ≠ 目标 ${langCode}，已重译`);
-      parsed.targetText = fixed;
-      parsed.languageCode = langCode;
-    }
+    const fixed = await this.translateToTarget(source, langName, langCode, signal);
+    console.warn(`[Language Fix] 模型输出语言 ${parsed.languageCode ?? '未知'} ≠ 目标 ${langCode}，已重译`);
+    parsed.targetText = fixed;
+    parsed.languageCode = langCode;
     return parsed;
   }
 }

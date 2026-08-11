@@ -32,6 +32,8 @@ export interface CardData {
   allPillText?: string;
   /** 全览卡底部回应选项（听完对方说话后选择） */
   reply?: { label: string; options: ReplyOption[] };
+  /** 卡来源：ask=我的表达（generateCard），reply=对方回话（replyToUtterance/建议回复直出） */
+  role?: 'ask' | 'reply';
 }
 
 /** 多步骤卡中的一步（打车/药店等协商流程） */

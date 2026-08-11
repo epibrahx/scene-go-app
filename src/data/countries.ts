@@ -46,3 +46,45 @@ export const TARGET_LANGS: LanguageOption[] = [
   { name: '英语', code: 'en-US' },
   { name: '法语', code: 'fr-FR' },
 ];
+
+/** 目的地国家（ISO 码）→ 目标语言中文名，06/09 屏语言对展示共用 */
+export const DEST_LANG_NAMES: Record<string, string> = {
+  TH: '泰语',
+  JP: '日语',
+  KR: '韩语',
+  VN: '越南语',
+  SG: '英语',
+  MY: '马来语',
+  ID: '印尼语',
+  LA: '老挝语',
+};
+
+/** BCP-47 语言码 → 中文名（10 屏 26 国列表展示用） */
+export const LANG_NAME_BY_CODE: Record<string, string> = {
+  'zh-CN': '中文',
+  'zh-HK': '粤语',
+  'zh-MO': '粤语',
+  'ja-JP': '日语',
+  'ko-KR': '韩语',
+  'th-TH': '泰语',
+  'vi-VN': '越南语',
+  'en-SG': '英语',
+  'en-GB': '英语',
+  'en-US': '英语',
+  'en-CA': '英语',
+  'en-AU': '英语',
+  'en-NZ': '英语',
+  'ms-MY': '马来语',
+  'id-ID': '印尼语',
+  'fil-PH': '菲律宾语',
+  'km-KH': '高棉语',
+  'hi-IN': '印地语',
+  'tr-TR': '土耳其语',
+  'ar-AE': '阿拉伯语',
+  'fr-FR': '法语',
+  'de-DE': '德语',
+  'it-IT': '意大利语',
+  'es-ES': '西班牙语',
+  'es-MX': '西班牙语',
+  'ru-RU': '俄语',
+};

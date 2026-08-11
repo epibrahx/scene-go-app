@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
-import { CameraView } from 'expo-camera';
-import { Locale, translate } from '../i18n';
+import React, { useRef } from 'react';
+import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Locale } from '../i18n';
 import { AppAction } from '../app/appReducer';
-import { permissionService, PermissionState } from '../services/permissionService';
-import { mediaLifecycle } from '../services/mediaLifecycle';
-import { compressImage } from '../utils/imageCompress';
 import { colors, fonts, radii } from '../theme/tokens';
 
 export interface CameraScreenProps {
@@ -14,171 +11,129 @@ export interface CameraScreenProps {
   onPhotoCaptured: (uri: string) => void;
 }
 
-export default function CameraScreen({ locale, dispatch, onPhotoCaptured }: CameraScreenProps) {
-  const [permission, setPermission] = useState<PermissionState>('undetermined');
-  const [isCapturing, setIsCapturing] = useState(false);
+/**
+ * 04 内联相机（DESIGN-v2.1.pen 04 屏）。
+ * Header（SCENEGO + 取消）+ 全屏取景器 + 底部 72px 快门。极简，无引导。
+ */
+export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreenProps) {
+  const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const busyRef = useRef(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const checkPerm = async () => {
-      const status = await permissionService.request('camera');
-      if (mounted) setPermission(status);
-    };
-    checkPerm();
-    return () => { mounted = false; };
-  }, []);
-
-  const handleCapture = async () => {
-    if (!cameraRef.current || isCapturing) return;
-    setIsCapturing(true);
+  const take = async () => {
+    if (busyRef.current) return;
+    if (!permission?.granted) {
+      await requestPermission();
+      return;
+    }
+    busyRef.current = true;
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 1,
-      });
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 0.8 });
       if (photo?.uri) {
-        const compressedUri = await compressImage(photo.uri);
-        mediaLifecycle.registerTempFile(compressedUri);
-        if (photo.uri !== compressedUri) {
-          mediaLifecycle.registerTempFile(photo.uri);
-        }
-        onPhotoCaptured(compressedUri);
+        onPhotoCaptured(photo.uri);
         dispatch({ type: 'navigate', route: 'photoResult' });
       }
-    } catch (e) {
-      console.warn('capture error', e);
     } finally {
-      setIsCapturing(false);
+      busyRef.current = false;
     }
   };
 
-  if (permission === 'undetermined') {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.accentBlue} />
-      </View>
-    );
-  }
-
-  if (permission === 'denied' || permission === 'permanentlyDenied') {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.head}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => dispatch({ type: 'navigate', route: 'home' })}>
-            <Text style={styles.backIcon}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.centerContent}>
-          <Text style={styles.permText}>{translate(locale, 'camera.permissionNeeded')}</Text>
-          <Text style={styles.altText}>{translate(locale, 'camera.textAlternative')}</Text>
-          <TouchableOpacity style={styles.btn} onPress={() => permissionService.openSettings()}>
-            <Text style={styles.btnText}>{translate(locale, 'permissions.openSettings')}</Text>
-          </TouchableOpacity>
+  return (
+    <View style={styles.root}>
+      <SafeAreaView style={styles.top}>
+        <View style={styles.header}>
+          <Text style={styles.brand}>SCENEGO</Text>
+          <Pressable
+            style={styles.cancel}
+            onPress={() => dispatch({ type: 'navigate', route: 'home' })}
+            accessibilityRole="button"
+            accessibilityLabel="取消"
+          >
+            <Text style={styles.cancelText}>取消</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
-    );
-  }
 
-  return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} ref={cameraRef} facing="back">
-        <SafeAreaView style={styles.overlay}>
-          <View style={styles.topBar}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => dispatch({ type: 'navigate', route: 'home' })}>
-              <Text style={styles.backIcon}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>{translate(locale, 'screens.camera.title')}</Text>
-            <View style={{ width: 44 }} />
-          </View>
-          
-          <View style={styles.bottomBar}>
-            <TouchableOpacity 
-              style={[styles.captureBtnOuter, isCapturing && styles.captureBtnDisabled]} 
-              onPress={handleCapture}
-              disabled={isCapturing}
-              accessibilityLabel={translate(locale, 'camera.capture')}
-            >
-              <View style={styles.captureBtnInner} />
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </CameraView>
+      <View style={styles.viewfinder}>
+        {permission?.granted ? (
+          <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+        ) : (
+          <Pressable style={styles.permissionGate} onPress={() => void requestPermission()}>
+            <Text style={styles.permissionText}>
+              {permission?.canAskAgain ? '需要相机权限，点按授权' : '相机权限不可用'}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      <SafeAreaView style={styles.bottomBar}>
+        <Pressable
+          style={styles.shutterOuter}
+          onPress={() => void take()}
+          accessibilityRole="button"
+          accessibilityLabel="拍照"
+        >
+          <View style={styles.shutterInner} />
+        </Pressable>
+      </SafeAreaView>
+
+      {busyRef.current ? <ActivityIndicator style={styles.busy} color={colors.textPrimary} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgPrimary },
-  safeArea: { flex: 1, backgroundColor: colors.bgPrimary },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgPrimary },
-  camera: { flex: 1 },
-  overlay: { flex: 1, justifyContent: 'space-between' },
-  head: {
+  root: { flex: 1, backgroundColor: '#09090b' },
+  top: { backgroundColor: '#09090b' },
+  header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    height: 60,
-  },
-  topBar: {
+    paddingVertical: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    height: 60,
   },
-  title: { color: colors.textPrimary, fontSize: 16, fontFamily: fonts.body },
-  backBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: colors.bgBar,
-    borderRadius: radii.r22,
-    alignItems: 'center',
-    justifyContent: 'center',
+  brand: {
+    fontFamily: fonts.mono,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 2,
   },
-  backIcon: { color: colors.textPrimary, fontSize: 20 },
-  bottomBar: {
-    paddingBottom: 40,
-    alignItems: 'center',
+  cancel: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radii.r12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
-  captureBtnOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 4,
-    borderColor: colors.textPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureBtnInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.textPrimary,
-  },
-  captureBtnDisabled: { opacity: 0.5 },
-  centerContent: {
+  cancelText: { color: colors.textSecondary, fontSize: 13 },
+  viewfinder: { flex: 1 },
+  camera: { flex: 1 },
+  permissionGate: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
-  permText: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 8,
+  permissionText: { color: colors.textSecondary, fontSize: 14 },
+  bottomBar: {
+    height: 130,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#09090b',
   },
-  altText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
+  shutterOuter: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  btn: {
-    backgroundColor: colors.accentBlue,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: radii.r10,
+  shutterInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ffffff',
   },
-  btnText: { color: colors.bgPrimary, fontSize: 16, fontWeight: '600' },
+  busy: { position: 'absolute', top: '50%', left: '50%', marginLeft: -12, marginTop: -12 },
 });

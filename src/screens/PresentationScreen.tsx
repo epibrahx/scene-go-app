@@ -1,92 +1,69 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Text, Pressable } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useStore } from 'zustand';
 import { cardStackStore, TAP_TALK_CARD } from '../core/cardStackStore';
-import { Locale, translate } from '../i18n';
+import { Locale } from '../i18n';
 import { AppAction } from '../app/appReducer';
 import { colors, fonts, radii } from '../theme/tokens';
-import { TtsButton } from '../components/TtsButton';
 
 export interface PresentationScreenProps {
   locale: Locale;
   dispatch: React.Dispatch<AppAction>;
 }
 
-export default function PresentationScreen({ locale, dispatch }: PresentationScreenProps) {
+/**
+ * 03 全屏大字展示（DESIGN-v2.1.pen 03 屏）。
+ * 遮罩 + 居中大卡（目标语言 40px + 音标 18px）；点任意处返回表达卡。
+ */
+export default function PresentationScreen({ dispatch }: PresentationScreenProps) {
   const cards = useStore(cardStackStore, (s) => s.cards);
   const index = useStore(cardStackStore, (s) => s.index);
   const card = cards[index] ?? TAP_TALK_CARD;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.head}>
-        <Pressable 
-          style={styles.backBtn} 
-          onPress={() => dispatch({ type: 'navigate', route: 'home' })}
-          accessibilityLabel={translate(locale, 'card.back')}
-        >
-          <Text style={styles.backIcon}>✕</Text>
-        </Pressable>
-        <TtsButton text={card.targetText} languageCode={card.languageCode} locale={locale} />
+    <Pressable
+      style={styles.root}
+      onPress={() => dispatch({ type: 'navigate', route: 'card' })}
+      accessibilityRole="button"
+      accessibilityLabel="关闭大字展示"
+    >
+      <View style={styles.bigCard}>
+        <Text style={styles.bigText}>{card.targetText}</Text>
+        {card.phonetic ? <Text style={styles.phonetic}>{card.phonetic}</Text> : null}
       </View>
-
-      <View style={styles.content}>
-        <Text style={styles.targetText} adjustsFontSizeToFit minimumFontScale={0.5} numberOfLines={5}>
-          {card.targetText}
-        </Text>
-        {!!card.phonetic && (
-          <Text style={styles.phoneticText}>{card.phonetic}</Text>
-        )}
-      </View>
-    </SafeAreaView>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
+    backgroundColor: colors.mask,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bigCard: {
+    width: 360,
+    maxWidth: '92%',
     backgroundColor: colors.bgPrimary,
-  },
-  head: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    height: 60,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    backgroundColor: colors.bgCard,
-    borderRadius: radii.r22,
+    borderRadius: radii.r20,
+    paddingVertical: 40,
+    paddingHorizontal: 32,
+    gap: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  targetText: {
+  bigText: {
     fontFamily: fonts.body,
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff',
+    fontSize: 40,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 24,
   },
-  phoneticText: {
+  phonetic: {
     fontFamily: fonts.body,
-    fontSize: 24,
     color: colors.textSecondary,
+    fontSize: 18,
     textAlign: 'center',
-  }
+  },
 });

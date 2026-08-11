@@ -1,143 +1,144 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Locale, translate } from '../i18n';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native';
+import Constants from 'expo-constants';
+import { Locale, TranslationKey, translate } from '../i18n';
 import { AppAction } from '../app/appReducer';
 import { colors, fonts, radii } from '../theme/tokens';
-import { getCachedSettings, saveAppSettings } from '../utils/appSettings';
-import { CompliancePanel } from '../components/CompliancePanel';
-import { clearAllLocalData } from '../storage/localRepository';
+import { SafetyFAB } from '../components/SafetyFAB';
 
 export interface SettingsScreenProps {
   locale: Locale;
   dispatch: React.Dispatch<AppAction>;
 }
 
+/** 设置行：目的地与语言 / 安全信息 / 关于与帮助 / 隐私 */
+interface SettingRow {
+  key: 'country' | 'safetyInfo' | 'about' | 'privacy';
+  icon: string;
+  label: string;
+}
+
+const ROWS: SettingRow[] = [
+  { key: 'country', icon: '◎', label: '目的地与语言' },
+  { key: 'safetyInfo', icon: '◈', label: '安全信息' },
+  { key: 'about', icon: 'ℹ', label: '关于与帮助' },
+  { key: 'privacy', icon: '◇', label: '隐私' },
+];
+
+/**
+ * 13 更多 · 设置聚合（DESIGN-v2.1.pen 13 屏）。
+ * 设置组卡（目的地与语言→06 / 安全信息→10 / 关于与帮助 / 隐私）+ 版本号 + SafetyFAB。
+ */
 export default function SettingsScreen({ locale, dispatch }: SettingsScreenProps) {
-  const settings = getCachedSettings();
+  const version = Constants.expoConfig?.version ?? '1.0.0';
 
-  const handleLanguageToggle = async () => {
-    const nextLocale = settings.uiLocale === 'zh-Hans' ? 'en' : 'zh-Hans';
-    await saveAppSettings({ ...settings, uiLocale: nextLocale });
-    // Note: To fully apply locale instantly, AppShell usually listens to settings. 
-    // This is handled by a listener or reload in production.
-  };
-
-  const handleClearData = () => {
-    Alert.alert(
-      translate(locale, 'settings.clearData'),
-      translate(locale, 'settings.clearConfirm'),
-      [
-        { text: translate(locale, 'common.cancel'), style: 'cancel' },
-        { 
-          text: translate(locale, 'common.success'),
-          style: 'destructive',
-          onPress: async () => {
-            await clearAllLocalData();
-            Alert.alert(translate(locale, 'settings.clearDone'));
-          }
-        }
-      ]
-    );
+  const onRow = (key: SettingRow['key']) => {
+    switch (key) {
+      case 'country':
+        dispatch({ type: 'navigate', route: 'country' });
+        return;
+      case 'safetyInfo':
+        dispatch({ type: 'navigate', route: 'safetyInfo' });
+        return;
+      case 'about':
+        Alert.alert(
+          translate(locale, 'settings13.aboutTitle'),
+          translate(locale, 'settings13.aboutDesc', { version }),
+        );
+        return;
+      case 'privacy':
+        Alert.alert(
+          translate(locale, 'settings13.privacyTitle'),
+          translate(locale, 'settings13.privacyDesc'),
+        );
+        return;
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => dispatch({ type: 'navigate', route: 'home' })}>
-          <Text style={styles.backText}>{translate(locale, 'card.back')}</Text>
+      {/* Head（画布无返回钮；自用加返回入口回首页） */}
+      <View style={styles.head}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => dispatch({ type: 'navigate', route: 'home' })}
+          accessibilityRole="button"
+          accessibilityLabel="返回"
+        >
+          <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{translate(locale, 'settings.title')}</Text>
+        <Text style={styles.headTitle}>{translate(locale, 'settings13.title')}</Text>
       </View>
-      <ScrollView style={styles.content}>
-        
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.row} onPress={handleLanguageToggle}>
-            <Text style={styles.rowLabel}>{translate(locale, 'settings.uiLanguage')}</Text>
-            <Text style={styles.rowValue}>{settings.uiLocale === 'zh-Hans' ? '简体中文' : 'English'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.row} onPress={() => dispatch({ type: 'navigate', route: 'country' })}>
-            <Text style={styles.rowLabel}>{translate(locale, 'settings.destination')}</Text>
-            <Text style={styles.rowValue}>{settings.destination.name} &gt;</Text>
-          </TouchableOpacity>
+
+      <View style={styles.settingsWrap}>
+        <View style={styles.group}>
+          {ROWS.map((row, idx) => (
+            <React.Fragment key={row.key}>
+              {idx > 0 ? <View style={styles.divider} /> : null}
+              <TouchableOpacity
+                style={styles.setRow}
+                onPress={() => onRow(row.key)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.setIcon}>{row.icon}</Text>
+                <Text style={styles.setLabel}>{translate(locale, `settings13.row${row.key}` as TranslationKey)}</Text>
+                <Text style={styles.setChevron}>›</Text>
+              </TouchableOpacity>
+            </React.Fragment>
+          ))}
         </View>
+        <Text style={styles.appVersion}>{translate(locale, 'settings13.versionLabel', { version })}</Text>
+      </View>
 
-        <CompliancePanel locale={locale} />
-
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.row} onPress={handleClearData}>
-            <Text style={[styles.rowLabel, styles.dangerText]}>{translate(locale, 'settings.clearData')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.version}>{translate(locale, 'settings.version')} 1.0.0</Text>
-      </ScrollView>
+      {/* SafetyFAB */}
+      <View style={styles.fabWrap}>
+        <SafetyFAB onPress={() => dispatch({ type: 'navigate', route: 'safetyDetail' })} />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-  },
-  header: {
+  safeArea: { flex: 1, backgroundColor: colors.bgPrimary },
+  head: {
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderColor: colors.borderSubtle,
+    paddingHorizontal: 20,
   },
-  backButton: {
-    paddingRight: 16,
-  },
-  backText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontFamily: fonts.body,
-  },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    fontFamily: fonts.body,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    paddingRight: 40,
-  },
-  content: {
-    padding: 16,
-  },
-  section: {
+  backBtn: {
+    width: 44,
+    height: 44,
     backgroundColor: colors.bgCardLight,
+    borderRadius: radii.r22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: { color: colors.textPrimary, fontSize: 24, lineHeight: 26, marginTop: -2 },
+  headTitle: { fontFamily: fonts.body, color: colors.textPrimary, fontSize: 20, fontWeight: '600', marginLeft: 8 },
+  settingsWrap: {
+    flex: 1,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  group: {
+    backgroundColor: colors.bgCard,
     borderRadius: radii.r16,
-    marginTop: 16,
-    overflow: 'hidden',
+    paddingVertical: 4,
   },
-  row: {
+  divider: { height: 1, backgroundColor: colors.borderSubtle },
+  setRow: {
+    height: 52,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderColor: colors.borderSubtle,
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
   },
-  rowLabel: {
-    fontSize: 16,
-    fontFamily: fonts.body,
-    color: colors.textPrimary,
-  },
-  rowValue: {
-    fontSize: 16,
-    fontFamily: fonts.body,
-    color: colors.textSecondary,
-  },
-  dangerText: {
-    color: colors.accentRed,
-  },
-  version: {
-    textAlign: 'center',
-    marginTop: 32,
-    color: colors.textTertiary,
-    fontSize: 13,
-    fontFamily: fonts.body,
-  }
+  setIcon: { color: colors.textSecondary, fontSize: 16, width: 22 },
+  setLabel: { flex: 1, fontFamily: fonts.body, color: colors.textPrimary, fontSize: 15 },
+  setChevron: { color: colors.textTertiary, fontSize: 16 },
+  appVersion: { fontFamily: fonts.body, color: colors.textTertiary, fontSize: 12, textAlign: 'center' },
+  fabWrap: { position: 'absolute', right: 16, bottom: 68 },
 });

@@ -32,13 +32,14 @@ export function buildReplyOptions(s: ScenarioResult): ReplyOption[] {
         subText: '',
         localTip: '',
         languageCode: s.languageCode || 'zh-CN',
+        role: 'reply',
       },
     });
   }
   return opts;
 }
 
-export function scenarioToCard(s: ScenarioResult, location: string): CardData {
+export function scenarioToCard(s: ScenarioResult, location: string, role: 'ask' | 'reply' = 'ask'): CardData {
   const fallbackText =
     s.recommendedPhrases?.[0]?.split('(')[0]?.trim() || s.translatedText || '请帮我';
   const replyOptions = buildReplyOptions(s);
@@ -53,6 +54,7 @@ export function scenarioToCard(s: ScenarioResult, location: string): CardData {
     subText: s.subText || '',
     localTip: s.localTip || s.tips?.[0] || '',
     languageCode: s.languageCode || 'zh-CN',
+    role,
     // 备用表达与提示列表：VLM 产物透传到卡面（此前被丢弃）
     phrases: s.recommendedPhrases?.length ? s.recommendedPhrases.slice(0, 3) : undefined,
     tips: s.tips?.length ? s.tips.slice(0, 3) : undefined,

@@ -33,14 +33,14 @@ export const expressionEngine = {
     const result = await pluginManager.processImageSnapshot(uri, locationCtx);
     return {
       scenario: result.scenario,
-      card: scenarioToCard(result.scenario, locationCtx ?? '当前位置'),
+      card: scenarioToCard(result.scenario, locationCtx ?? '当前位置', 'ask'),
     };
   },
 
   /** 文本驱动的动态表达卡：一句话需求（打字/语音）→ AI 翻译成目标语言表达卡 */
   async generateCard(text: string, location?: string): Promise<CardData> {
     const result = await pluginManager.generateCardFromText(text, location);
-    const card = scenarioToCard(result, location ?? '当前位置');
+    const card = scenarioToCard(result, location ?? '当前位置', 'ask');
     console.log(
       `[Card trace] 云端VLM → card=${card.id} category=${card.categoryTag} title=${card.title} menu=${result.menu ? `signature=${result.menu.signature.length}/dishes=${result.menu.dishes.length}` : '无'}`,
     );
@@ -62,7 +62,7 @@ export const expressionEngine = {
    */
   async replyToUtterance(text: string, location?: string): Promise<CardData> {
     const result = await pluginManager.generateReplyCard(text, location);
-    return scenarioToCard(result, location ?? '当前位置');
+    return scenarioToCard(result, location ?? '当前位置', 'reply');
   },
 
   /**

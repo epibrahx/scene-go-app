@@ -1,6 +1,6 @@
 /**
  * 表达引擎：场景识别与表达卡生成的业务核心（与 UI 无关）。
- * 输入（图片/文本/追问）→ 解读或表达卡；所有 AI/本地匹配经由 plugins 层。
+ * 输入（图片/文本/追问）→ 云端解读或表达卡。
  */
 import { pluginManager } from '../plugins/PluginManager';
 import { parseVlmScenarioResult } from '../plugins/ocr/CloudVlmOcrPlugin';
@@ -14,8 +14,6 @@ import { CardData } from './types';
 export interface ProcessImageResult {
   scenario: ScenarioResult;
   card: CardData;
-  /** 云端识别错误标记（如未配置 Key / 鉴权失败 / 网络异常），命中时由 UI 提示用户，本地词库结果仍返回 */
-  ocrIssue?: string;
 }
 
 export interface AskFollowUpResult {
@@ -26,7 +24,7 @@ export interface AskFollowUpResult {
 
 export const expressionEngine = {
   /**
-   * 拍照管线：压缩 → OCR/匹配 → 解读 + 表达卡。
+   * 拍照管线：压缩 → 云端识别 → 解读 + 表达卡。
    * （照片捕获本身属设备/UI 层，调用方传入 uri；位置上下文内部获取）
    */
   async processImage(photoUri: string, location?: string): Promise<ProcessImageResult> {
@@ -35,27 +33,14 @@ export const expressionEngine = {
     const result = await pluginManager.processImageSnapshot(uri, locationCtx);
     return {
       scenario: result.scenario,
-      card: scenarioToCard(result.scenario, locationCtx ?? '当前位置'),
-      // CloudVlmOcrPlugin 约定：错误行以 [ 开头（如「[未配置 API Key…]」）；此时场景来自本地词库兜底
-      ocrIssue: result.ocr.lines.find((l) => l.startsWith('[')),
+      card: scenarioToCard(result.scenario, locationCtx ?? '当前位置', 'ask'),
     };
   },
 
   /** 文本驱动的动态表达卡：一句话需求（打字/语音）→ AI 翻译成目标语言表达卡 */
-  async generateCard(text: string, location?: string): Promise<CardData | null> {
+  async generateCard(text: string, location?: string): Promise<CardData> {
     const result = await pluginManager.generateCardFromText(text, location);
-    if (!result) {
-      pipelineTraceStore.getState().pushTrace({
-        at: Date.now(),
-        input: text,
-        path: 'none',
-        category: '未命中',
-        targetText: '',
-        steps: 0,
-      });
-      return null;
-    }
-    const card = scenarioToCard(result, location ?? '当前位置');
+    const card = scenarioToCard(result, location ?? '当前位置', 'ask');
     console.log(
       `[Card trace] 云端VLM → card=${card.id} category=${card.categoryTag} title=${card.title} menu=${result.menu ? `signature=${result.menu.signature.length}/dishes=${result.menu.dishes.length}` : '无'}`,
     );
@@ -75,10 +60,9 @@ export const expressionEngine = {
    * 聆听对方（mic ambient）：对方用当地语言说了一段话 → 一张合并回复卡
    * （外语回复在上递给人看，母语译文在下供用户理解）。一次输入 = 一张卡。
    */
-  async replyToUtterance(text: string, location?: string): Promise<CardData | null> {
+  async replyToUtterance(text: string, location?: string): Promise<CardData> {
     const result = await pluginManager.generateReplyCard(text, location);
-    if (!result) return null;
-    return scenarioToCard(result, location ?? '当前位置');
+    return scenarioToCard(result, location ?? '当前位置', 'reply');
   },
 
   /**

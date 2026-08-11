@@ -26,7 +26,7 @@ export const PRIVACY_POLICY: ComplianceDoc = {
       heading: '二、信息的存储与安全',
       body:
         '1. 所有本地数据（笔记、会话、设置）仅存储于您的设备，删除 App 即全部清除。\n' +
-        '2. API 密钥等敏感信息使用系统安全存储（iOS Keychain）。\n' +
+        '2. 服务鉴权由构建环境配置，App 不收集或存储用户 API 密钥。\n' +
         '3. 发送至云端 AI 的图片与文本通过 HTTPS 加密传输。',
     },
     {
@@ -98,7 +98,6 @@ export const DATA_SHEET: ComplianceDoc = {
         '| 语音 | 实时转写 | 不存储 | 否（设备端识别） |\n' +
         '| 位置 | 国家匹配/安全卡 | 设备端 | 否 |\n' +
         '| 笔记/会话 | 个人记录 | 设备 AsyncStorage | 否 |\n' +
-        '| API 密钥 | 调用识别服务 | iOS Keychain | 否（直接用于请求） |\n' +
         '| 崩溃信息 | 稳定性改进 | Sentry | 是（不含照片/语音） |',
     },
     {

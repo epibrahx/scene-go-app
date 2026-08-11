@@ -45,7 +45,6 @@
       }
     },
     "plugins": [
-      "expo-secure-store",
       "./plugins/withResetAutoSigning",
       "expo-font"
     ]

@@ -1,112 +1,244 @@
-/**
- * 02 表达卡 · 成卡结果 屏。
- * 数据源：cardStackStore 当前卡（cards[index]）。我方表达 = 当前卡内容；
- * 建议回复取 card.reply.options（成卡时预生成），Phase 1 用 .pen 定稿的两条文案占位。
- * 点回复块「直出 replyCard」：cardStackStore.add(opt.replyCard)（SCN-27 决策）。
- */
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useStore } from 'zustand';
 import { cardStackStore, TAP_TALK_CARD } from '../core/cardStackStore';
-import { ExpressionCard, BubbleProps } from '../components/ExpressionCard';
-import { ReplyRow } from '../components/ReplyRow';
+import { CardData } from '../core/types';
+import { Locale, translate } from '../i18n';
+import { AppAction } from '../app/appReducer';
+import { AppError } from '../errors/AppError';
 import { colors, fonts, radii } from '../theme/tokens';
-import { ReplyOption } from '../core/types';
+import { expressionEngine } from '../core/expressionEngine';
+import { getCachedSettings } from '../utils/appSettings';
+import { getPlaceContext } from '../utils/locationContext';
+import { ttsService } from '../services/ttsService';
+import { useHoldToSpeak } from '../hooks/useHoldToSpeak';
+import { InputBar, MicMode } from '../components/InputBar';
 
-/** Phase 1 占位回复选项：.pen ReplyRow 定稿文案；后续由成卡时预生成替换 */
-const FALLBACK_REPLY_OPTIONS: ReplyOption[] = [
-  {
-    label: '好的，谢谢',
-    replyCard: {
-      id: 'rep-thanks',
-      categoryTag: 'REPLY',
-      locationName: '当前位置',
-      title: '致谢',
-      targetText: 'ขอบคุณครับ',
-      phonetic: 'kòp-kun kráp',
-      subText: '',
-      localTip: '礼貌致谢',
-      languageCode: 'th-TH',
-    },
-  },
-  {
-    label: '太贵了，能便宜点吗',
-    replyCard: {
-      id: 'rep-price',
-      categoryTag: 'REPLY',
-      locationName: '当前位置',
-      title: '议价',
-      targetText: 'แพงไป ขอถูกลงหน่อยได้ไหม',
-      phonetic: 'paeng pai kǒ tǔuk long nòi dâi mái',
-      subText: '',
-      localTip: '议价常用语',
-      languageCode: 'th-TH',
-    },
-  },
-];
+export interface CardResultScreenProps {
+  locale: Locale;
+  dispatch: React.Dispatch<AppAction>;
+}
 
-export default function CardResultScreen() {
+/**
+ * 02 表达卡 · 成卡结果（DESIGN-v2.1.pen 02 屏）。
+ * 聊天式双气泡：我的表达（ask）右、对方回话（reply）左 + 建议回复区；
+ * 底部输入栏（MicBtn 点按切换 我说/对方说，按住说话）+ 安全链接。
+ */
+export default function CardResultScreen({ locale, dispatch }: CardResultScreenProps) {
   const cards = useStore(cardStackStore, (s) => s.cards);
   const index = useStore(cardStackStore, (s) => s.index);
   const add = useStore(cardStackStore, (s) => s.add);
 
-  const card = cards[index] ?? TAP_TALK_CARD;
-  const replyOptions = card.reply?.options?.length ? card.reply.options : FALLBACK_REPLY_OPTIONS;
+  const [micMode, setMicMode] = useState<MicMode>('speak');
+  const [placeName, setPlaceName] = useState('');
+  const hold = useHoldToSpeak();
 
-  const mine: BubbleProps = {
-    who: '我的表达',
-    whoColor: colors.accentBlue,
-    foreign: card.targetText,
-    phonetic: card.phonetic || undefined,
-    zh: card.subText || card.title,
+  React.useEffect(() => {
+    let mounted = true;
+    void getPlaceContext().then((p) => {
+      if (mounted) setPlaceName(p?.city ? `${p.city}` : '');
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const card = cards[index] ?? TAP_TALK_CARD;
+  const isReply = card.role === 'reply';
+  const settings = getCachedSettings();
+  const destName = settings.destination.name;
+  const headLoc = placeName ? `${destName} · ${placeName}` : destName;
+
+  const speak = async (text: string, languageCode: string) => {
+    try {
+      await ttsService.play(text, languageCode || settings.targetLanguage.code);
+    } catch {
+      Alert.alert(translate(locale, 'tts.unavailable'));
+    }
+  };
+
+  const createCard = async (text: string) => {
+    dispatch({ type: 'taskStart', status: 'submitting' });
+    try {
+      const generated = micMode === 'listen'
+        ? await expressionEngine.replyToUtterance(text)
+        : await expressionEngine.generateCard(text);
+      add(generated);
+      dispatch({ type: 'taskSuccess' });
+      if (micMode === 'listen') {
+        // 对方回话：顺手朗读给对方听
+        void speak(generated.targetText, generated.languageCode);
+      }
+    } catch {
+      dispatch({ type: 'taskError', error: new AppError('server', '生成失败') });
+      Alert.alert(translate(locale, 'common.error'));
+    }
+  };
+
+  const handleHoldStart = () => {
+    void (async () => {
+      const localeCode = micMode === 'listen' ? settings.targetLanguage.code : 'zh-CN';
+      const res = await hold.start(localeCode);
+      if (!res.ok) Alert.alert(translate(locale, 'speech.unavailable'));
+    })();
+  };
+
+  const handleHoldEnd = () => {
+    void (async () => {
+      const text = await hold.stop();
+      if (text) void createCard(text);
+      else Alert.alert(translate(locale, 'idle.emptyTranscript'));
+    })();
+  };
+
+  const selectReply = (option: { label: string; replyCard: Omit<CardData, 'reply'> }) => {
+    add(option.replyCard as CardData);
+    void speak(option.replyCard.targetText, option.replyCard.languageCode);
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.safeArea}>
       {/* Head */}
       <View style={styles.head}>
-        <View style={styles.headLeft}>
-          <Pressable style={styles.backBtn}>
-            <Text style={styles.backIcon}>‹</Text>
-          </Pressable>
-          <View>
-            <Text style={styles.headTitle}>表达卡</Text>
-            <Text style={styles.headLoc}>{card.locationName}</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => dispatch({ type: 'navigate', route: 'home' })}
+          accessibilityRole="button"
+          accessibilityLabel="返回"
+        >
+          <Text style={styles.backIcon}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.headTitle}>{translate(locale, 'card02.title')}</Text>
+        <Text style={styles.headLoc}>{headLoc}</Text>
       </View>
 
-      {/* 双气泡 + 建议回复 */}
-      <View style={styles.content}>
-        <ExpressionCard mine={mine} />
-        <ReplyRow
-          label="你可以这样接 · 点一下说给对方听"
-          options={replyOptions}
-          onSelect={(opt) => add(opt.replyCard)}
+      {/* CardWrap */}
+      <View style={styles.cardWrap}>
+        {/* 我方表达（ask）：右 */}
+        <View style={styles.rowEnd}>
+          <Bubble
+            who={translate(locale, 'card02.whoMine')}
+            targetText={card.targetText}
+            phonetic={card.phonetic}
+            zhText={card.subText}
+            onPlay={() => void speak(card.targetText, card.languageCode)}
+            onPress={() => dispatch({ type: 'navigate', route: 'presentation' })}
+          />
+        </View>
+
+        {/* 对方回话（reply）：左 */}
+        {isReply ? (
+          <View style={styles.rowStart}>
+            <Bubble
+              who={translate(locale, 'card02.whoOther')}
+              targetText={card.targetText}
+              phonetic={card.phonetic}
+              zhText={card.subText}
+              onPlay={() => void speak(card.targetText, card.languageCode)}
+              onPress={() => dispatch({ type: 'navigate', route: 'presentation' })}
+            />
+          </View>
+        ) : null}
+
+        {/* 建议回复区 */}
+        {card.reply?.options?.length ? (
+          <View style={styles.replyArea}>
+            <Text style={styles.replyLabel}>{translate(locale, 'card02.replyLabel')}</Text>
+            <View style={styles.replyRow}>
+              {card.reply.options.slice(0, 2).map((opt) => (
+                <TouchableOpacity
+                  key={opt.label}
+                  style={styles.replyPill}
+                  onPress={() => selectReply(opt)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.replyText}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+
+      {/* InputWrap */}
+      <View style={styles.inputWrap}>
+        <InputBar
+          placeholder={translate(locale, 'idle.placeholder')}
+          onSubmitText={(text) => void createCard(text)}
+          micMode={micMode}
+          onToggleMicMode={() => setMicMode((m) => (m === 'speak' ? 'listen' : 'speak'))}
+          onHoldStart={handleHoldStart}
+          onHoldEnd={handleHoldEnd}
+          disabled={hold.recording}
         />
       </View>
 
-      {/* SafetyLink 占位 */}
-      <Pressable style={styles.safetyLink}>
-        <Text style={styles.safetyText}>查看 安全信息</Text>
-      </Pressable>
-    </View>
+      {/* Hint */}
+      <View style={styles.hintWrap}>
+        <Text style={styles.hint}>
+          {translate(locale, 'card02.hint', {
+            mode: micMode === 'speak'
+              ? translate(locale, 'card02.modeSpeak')
+              : translate(locale, 'card02.modeListen'),
+          })}
+        </Text>
+      </View>
+
+      {/* SafetyLink → 07 */}
+      <TouchableOpacity
+        style={styles.safetyLink}
+        onPress={() => dispatch({ type: 'navigate', route: 'safety' })}
+        accessibilityRole="button"
+      >
+        <Text style={styles.safetyIcon}>◉</Text>
+        <Text style={styles.safetyText}>
+          {translate(locale, 'card02.safetyLink', { country: destName })}
+        </Text>
+        <Text style={styles.safetyIcon}>›</Text>
+      </TouchableOpacity>
+
+    </SafeAreaView>
+  );
+}
+
+function Bubble({
+  who,
+  targetText,
+  phonetic,
+  zhText,
+  onPlay,
+  onPress,
+}: {
+  who: string;
+  targetText: string;
+  phonetic: string;
+  zhText: string;
+  onPlay: () => void;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.bubble} onPress={onPress} accessibilityRole="button" accessibilityLabel="放大展示">
+      <View style={styles.metaRow}>
+        <Text style={styles.whoTag}>{who}</Text>
+        <Pressable onPress={onPlay} hitSlop={8} accessibilityRole="button" accessibilityLabel="播放">
+          <Image source={require('../../assets/icon-play.png')} style={styles.playIcon} resizeMode="contain" />
+        </Pressable>
+      </View>
+      <Text style={styles.targetText}>{targetText}</Text>
+      {phonetic ? <Text style={styles.phonetic}>{phonetic}</Text> : null}
+      {zhText ? <Text style={styles.zhText}>{zhText}</Text> : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.bgPrimary,
-    paddingHorizontal: 20,
-  },
+  safeArea: { flex: 1, backgroundColor: colors.bgPrimary },
   head: {
     height: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  headLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   backBtn: {
     width: 44,
     height: 44,
@@ -115,15 +247,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: { color: colors.textPrimary, fontSize: 26, lineHeight: 30, marginTop: -2 },
-  headTitle: { fontFamily: fonts.body, fontSize: 16, color: colors.textPrimary },
-  headLoc: { fontFamily: fonts.body, fontSize: 12, color: colors.textTertiary },
-  content: { flex: 1, gap: 16, paddingVertical: 16 },
-  safetyLink: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  backIcon: { color: colors.textPrimary, fontSize: 24, lineHeight: 26, marginTop: -2 },
+  headTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: fonts.body,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  headLoc: {
+    position: 'absolute',
+    right: 20,
+    fontFamily: fonts.body,
+    color: colors.textTertiary,
+    fontSize: 12,
+  },
+  cardWrap: {
+    flex: 1,
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    gap: 16,
+  },
+  rowEnd: { flexDirection: 'row', justifyContent: 'flex-end' },
+  rowStart: { flexDirection: 'row', justifyContent: 'flex-start' },
+  bubble: {
+    maxWidth: '85%',
+    backgroundColor: colors.bgCardLight,
+    borderRadius: radii.r16,
+    padding: 14,
     gap: 6,
   },
-  safetyText: { fontFamily: fonts.body, fontSize: 12, color: colors.accentGreen },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  whoTag: { fontFamily: fonts.body, color: colors.textTertiary, fontSize: 12 },
+  playIcon: { width: 18, height: 18, tintColor: colors.textSecondary },
+  targetText: { fontFamily: fonts.body, color: colors.textPrimary, fontSize: 17, fontWeight: '500' },
+  phonetic: { fontFamily: fonts.body, color: colors.textSecondary, fontSize: 12 },
+  zhText: { fontFamily: fonts.body, color: colors.accentYellow, fontSize: 13 },
+  replyArea: { gap: 10 },
+  replyLabel: { fontFamily: fonts.body, color: colors.textTertiary, fontSize: 12 },
+  replyRow: { flexDirection: 'row', gap: 10 },
+  replyPill: {
+    flex: 1,
+    height: 40,
+    backgroundColor: colors.bgCardLight,
+    borderRadius: radii.r10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  replyText: { fontFamily: fonts.body, color: colors.textPrimary, fontSize: 14 },
+  inputWrap: { paddingHorizontal: 20, paddingTop: 8 },
+  hintWrap: { alignItems: 'center', paddingVertical: 14 },
+  hint: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 11 },
+  safetyLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+  },
+  safetyIcon: { color: colors.accentGreen, fontSize: 14 },
+  safetyText: { fontFamily: fonts.body, color: colors.accentGreen, fontSize: 12, fontWeight: '600' },
 });

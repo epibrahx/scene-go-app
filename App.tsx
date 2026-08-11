@@ -1,31 +1,22 @@
 import React, { useEffect } from 'react';
-import { SafeAreaView, StyleSheet } from 'react-native';
-import { modelManager } from './src/utils/ModelManager';
-import { initPack } from './src/packs/packManager';
-import CardResultScreen from './src/screens/CardResultScreen';
-import { colors } from './src/theme/tokens';
+import { StatusBar } from 'expo-status-bar';
+import { AppShell } from './src/app/AppShell';
+import { ErrorBoundary } from './src/app/ErrorBoundary';
+import { loadAppSettings } from './src/utils/appSettings';
 
 /**
- * SceneGo — 启动壳。
- * 初始化功能内核（场景包 + 本地模型），渲染 02 表达卡·成卡结果 屏（Phase 1）。
+ * 入口：挂 ErrorBoundary + AppShell（DESIGN-v2.1.pen 11 屏路由）。
+ * loadAppSettings 异步水合设置到内存缓存（getCachedSettings 在未加载时回退默认值）。
  */
 export default function App() {
   useEffect(() => {
-    initPack().catch((err) => console.warn('[ScenePack] 初始化失败:', err));
-    modelManager.initializeExistingModels().then((loaded) => {
-      if (loaded) {
-        console.log('[Models] 本地模型已加载');
-      }
-    });
+    void loadAppSettings().catch(() => {});
   }, []);
 
   return (
-    <SafeAreaView style={styles.root}>
-      <CardResultScreen />
-    </SafeAreaView>
+    <ErrorBoundary>
+      <StatusBar style="light" />
+      <AppShell />
+    </ErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgPrimary },
-});

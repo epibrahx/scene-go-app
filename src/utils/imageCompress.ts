@@ -19,19 +19,15 @@ export async function compressImage(uri: string): Promise<string> {
       },
     );
     const scale = Math.min(1, MAX_EDGE / Math.max(width, height));
-    if (scale >= 1) {
-      return uri; // 已够小
-    }
+    
     const isLandscape = width >= height;
+    const actions = scale < 1 
+      ? [{ resize: isLandscape ? { width: Math.round(width * scale) } : { height: Math.round(height * scale) } }]
+      : [];
+      
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      [
-        {
-          resize: isLandscape
-            ? { width: Math.round(width * scale) }
-            : { height: Math.round(height * scale) },
-        },
-      ],
+      actions as ImageManipulator.Action[],
       { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
     );
     console.log(

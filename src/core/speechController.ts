@@ -1,8 +1,5 @@
-/**
- * 语音流程编排：听写启动/停止（仅 iOS 原生 SFSpeechRecognizer 模块）。
- * 实时转录显示（liveTranscript）属视图层，由 UI 订阅原生事件自行展示。
- */
 import { NativeSpeech } from '../utils/NativeSpeech';
+import { AppError } from '../errors/AppError';
 
 export interface SpeechStartResult {
   ok: boolean;
@@ -10,13 +7,64 @@ export interface SpeechStartResult {
 }
 
 export const speechController = {
-  /** 开始听写；locale 为 BCP-47 识别语言（自己说话用 zh-CN，聆听对方用目标语言） */
-  async start(locale: string = 'zh-CN'): Promise<SpeechStartResult> {
-    return NativeSpeech.start(locale);
+  _activeSession: null as string | null,
+
+  async start(locale: string = 'zh-CN', sessionId: string): Promise<SpeechStartResult> {
+    if (this._activeSession) {
+      return { ok: false, error: 'Another session is active' };
+    }
+    this._activeSession = sessionId;
+    const result = await NativeSpeech.start(locale);
+    if (!result.ok) {
+      this._activeSession = null;
+      throw new AppError('speech', result.error || 'Unknown speech start error');
+    }
+    return result;
   },
 
-  /** 停止转录（await 期间到达的 final 事件不会丢失） */
-  async stop(): Promise<void> {
+  async stop(sessionId: string): Promise<void> {
+    if (this._activeSession !== sessionId) return;
     await NativeSpeech.stop();
+    // wait 300ms for final event after stopping
+    await new Promise(resolve => setTimeout(resolve, 300));
+    this._activeSession = null;
   },
+
+  async cancel(sessionId: string): Promise<void> {
+    if (this._activeSession !== sessionId) return;
+    await NativeSpeech.stop();
+    this._activeSession = null;
+  },
+
+  onPartial(cb: (text: string) => void) {
+    const sub = NativeSpeech.onSpeechResult((e) => {
+      if (!e.isFinal) cb(e.transcript);
+    });
+    return () => sub.remove();
+  },
+
+  onFinal(cb: (text: string) => void) {
+    const sub = NativeSpeech.onSpeechResult((e) => {
+      if (e.isFinal) cb(e.transcript);
+    });
+    return () => sub.remove();
+  },
+
+  onError(cb: (error: string) => void) {
+    const sub = NativeSpeech.onSpeechError((e) => {
+      cb(new AppError('speech', e.message).message);
+    });
+    return () => sub.remove();
+  },
+
+  isActive() {
+    return this._activeSession !== null;
+  },
+
+  async cleanup() {
+    if (this._activeSession) {
+      await NativeSpeech.stop();
+      this._activeSession = null;
+    }
+  }
 };

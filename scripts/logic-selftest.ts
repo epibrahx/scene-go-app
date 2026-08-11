@@ -1,12 +1,11 @@
 /**
  * 纯逻辑回归测试（无 RN 依赖模块）：bun run scripts/logic-selftest.ts
- * 覆盖：VLM 解析 / 卡构建降级 / 横滑短语解析 / 本地词库匹配 / 国家安全数据完整性。
+ * 覆盖：VLM 解析 / 卡构建降级 / 横滑短语解析 / 国家安全数据完整性。
  * 修改这些模块或内容数据前必跑；全绿才可提交。
  */
 import { parseVlmScenarioResult } from '../src/plugins/ocr/parseVlmScenario';
 import { scenarioToCard } from '../src/utils/cardBuilder';
 import { toPhraseCards } from '../src/utils/cardPhrases';
-import { LocalDictMatcherPlugin } from '../src/plugins/matchers/LocalDictMatcherPlugin';
 import { COUNTRY_SAFETY } from '../src/data/countrySafety';
 
 let failed = 0;
@@ -50,7 +49,7 @@ const partial = parseVlmScenarioResult('{"title":"只有标题"}');
 check('部分字段容错（默认 category）', partial?.title === '只有标题' && partial?.category === 'SCENE');
 
 const invalid = parseVlmScenarioResult('这不是 JSON 的模型输出');
-check('非法 JSON 兜底为解读', invalid?.title === '场景解读' && invalid?.translatedText === '这不是 JSON 的模型输出');
+check('非法 JSON 严格返回 null', invalid === null);
 
 check('空输入返回 null', parseVlmScenarioResult('') === null);
 check('菜单结构非法 → 无菜单', parseVlmScenarioResult('{"title":"t","menu":{"bad":true}}')?.menu === undefined);
@@ -92,20 +91,6 @@ check('空/未定义返回 undefined', toPhraseCards(undefined) === undefined &&
 const many = toPhraseCards(['a (1)', 'b (2)', 'c (3)', 'd (4)']);
 check('最多取 3 个', many?.length === 3);
 
-// ── LocalDictMatcherPlugin（离线词库匹配）──
-console.log('── LocalDictMatcherPlugin ──');
-async function main() {
-  const dict = new LocalDictMatcherPlugin();
-  const taxi = await dict.match('taxi by meter please');
-  check('英文关键词命中 TAXI', taxi.category === 'TAXI' && taxi.recommendedPhrases.length > 0);
-  const metro = await dict.match('地铁站购票');
-  check('中文关键词命中 METRO', metro.category === 'METRO');
-  const rest = await dict.match('餐厅菜单过敏');
-  check('中文关键词命中 RESTAURANT', rest.category === 'RESTAURANT');
-  const generic = await dict.match('完全无关的乱写文本 zzz');
-  check('未命中 → 通用兜底', generic.category === 'GENERAL_SCENE' && generic.title === '识别到出行通用场景');
-}
-
 // ── 国家安全数据完整性 ──
 console.log('── countrySafety 数据完整性 ──');
 check('至少 1 个国家', COUNTRY_SAFETY.length >= 1);
@@ -128,12 +113,5 @@ for (const c of COUNTRY_SAFETY) {
 }
 check('全部国家必填字段与电话格式合法', badCountry.length === 0, badCountry.slice(0, 5).join(' | '));
 
-main()
-  .then(() => {
-    console.log(failed === 0 ? '\n全部通过 ✅' : `\n${failed} 项失败 ❌`);
-    process.exit(failed === 0 ? 0 : 1);
-  })
-  .catch((err: unknown) => {
-    console.error('测试执行异常:', err);
-    process.exit(1);
-  });
+console.log(failed === 0 ? '\n全部通过 ✅' : `\n${failed} 项失败 ❌`);
+process.exit(failed === 0 ? 0 : 1);

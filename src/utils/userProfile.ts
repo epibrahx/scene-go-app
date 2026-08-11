@@ -5,6 +5,8 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export { LANGUAGE_OPTIONS, NATIONALITY_OPTIONS } from '../data/countries';
+
 const KEY = '@scenego/user-profile';
 
 export interface UserProfile {
@@ -15,35 +17,6 @@ export interface UserProfile {
   /** 过敏原（中文，如 ['花生']）；目前无写入 UI，仅供药店分步卡读取与未来「个人档案」使用 */
   allergens?: string[];
 }
-
-/** 国籍可选列表（用户来源国，不限于目的地数据集） */
-export const NATIONALITY_OPTIONS: { code: string; name: string }[] = [
-  { code: 'CN', name: '中国' },
-  { code: 'TH', name: '泰国' },
-  { code: 'JP', name: '日本' },
-  { code: 'KR', name: '韩国' },
-  { code: 'SG', name: '新加坡' },
-  { code: 'MY', name: '马来西亚' },
-  { code: 'ID', name: '印度尼西亚' },
-  { code: 'VN', name: '越南' },
-  { code: 'PH', name: '菲律宾' },
-  { code: 'US', name: '美国' },
-  { code: 'GB', name: '英国' },
-  { code: 'AU', name: '澳大利亚' },
-];
-
-/** 语言选项（UI 语言与表达偏好） */
-export const LANGUAGE_OPTIONS: { code: string; name: string }[] = [
-  { code: 'zh-CN', name: '简体中文' },
-  { code: 'en-US', name: 'English' },
-  { code: 'ja-JP', name: '日本語' },
-  { code: 'ko-KR', name: '한국어' },
-  { code: 'th-TH', name: 'ไทย' },
-  { code: 'ms-MY', name: 'Bahasa Melayu' },
-  { code: 'id-ID', name: 'Bahasa Indonesia' },
-  { code: 'vi-VN', name: 'Tiếng Việt' },
-  { code: 'fil-PH', name: 'Filipino' },
-];
 
 export async function loadUserProfile(): Promise<UserProfile | null> {
   try {

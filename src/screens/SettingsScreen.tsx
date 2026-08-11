@@ -5,7 +5,6 @@ import Constants from 'expo-constants';
 import { Locale, TranslationKey, translate } from '../i18n';
 import { AppAction } from '../app/appReducer';
 import { colors, fonts, radii } from '../theme/tokens';
-import { SafetyFAB } from '../components/SafetyFAB';
 
 export interface SettingsScreenProps {
   locale: Locale;
@@ -28,7 +27,7 @@ const ROWS: SettingRow[] = [
 
 /**
  * 13 更多 · 设置聚合（DESIGN-v2.1.pen 13 屏）。
- * 设置组卡（目的地与语言→06 / 安全信息→10 / 关于与帮助 / 隐私）+ 版本号 + SafetyFAB。
+ * 设置组卡（目的地与语言→06 / 安全信息→10 / 关于与帮助 / 隐私）+ 版本号。
  */
 export default function SettingsScreen({ locale, dispatch }: SettingsScreenProps) {
   const version = Constants.expoConfig?.version ?? '1.0.0';
@@ -91,10 +90,6 @@ export default function SettingsScreen({ locale, dispatch }: SettingsScreenProps
         <Text style={styles.appVersion}>{translate(locale, 'settings13.versionLabel', { version })}</Text>
       </View>
 
-      {/* SafetyFAB */}
-      <View style={styles.fabWrap}>
-        <SafetyFAB onPress={() => dispatch({ type: 'navigate', route: 'safetyDetail' })} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -140,5 +135,4 @@ const styles = StyleSheet.create({
   setLabel: { flex: 1, fontFamily: fonts.body, color: colors.textPrimary, fontSize: 15 },
   setChevron: { color: colors.textTertiary, fontSize: 16 },
   appVersion: { fontFamily: fonts.body, color: colors.textTertiary, fontSize: 12, textAlign: 'center' },
-  fabWrap: { position: 'absolute', right: 16, bottom: 68 },
 });

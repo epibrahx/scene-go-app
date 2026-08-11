@@ -19,7 +19,6 @@ import { getCachedSettings, saveAppSettings } from '../utils/appSettings';
 import { getPlaceContext, PlaceContext } from '../utils/locationContext';
 import { useHoldToSpeak } from '../hooks/useHoldToSpeak';
 import { InputBar } from '../components/InputBar';
-import { SafetyFAB } from '../components/SafetyFAB';
 
 export interface HomeScreenProps {
   locale: Locale;
@@ -199,10 +198,6 @@ export default function HomeScreen({ locale, dispatch, taskState }: HomeScreenPr
         </TouchableOpacity>
       ) : null}
 
-      {/* SafetyFAB（→08 安全详情） */}
-      <View style={styles.fabWrap}>
-        <SafetyFAB onPress={() => dispatch({ type: 'navigate', route: 'safetyDetail' })} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -347,10 +342,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.textPrimary,
     fontSize: 13,
-  },
-  fabWrap: {
-    position: 'absolute',
-    right: 16,
-    bottom: 68,
   },
 });

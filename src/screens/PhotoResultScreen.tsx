@@ -21,7 +21,6 @@ import { getCachedSettings } from '../utils/appSettings';
 import { getPlaceContext } from '../utils/locationContext';
 import { ttsService } from '../services/ttsService';
 import { InputBar } from '../components/InputBar';
-import { SafetyFAB } from '../components/SafetyFAB';
 
 export interface PhotoResultScreenProps {
   locale: Locale;
@@ -224,10 +223,6 @@ export default function PhotoResultScreen({ locale, dispatch, photoUri }: PhotoR
         </View>
       </View>
 
-      {/* SafetyFAB */}
-      <View style={styles.fabWrap}>
-        <SafetyFAB onPress={() => dispatch({ type: 'navigate', route: 'safetyDetail' })} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -341,5 +336,4 @@ const styles = StyleSheet.create({
   },
   playAllIcon: { color: '#0a0a1e', fontSize: 15 },
   playAllText: { fontFamily: fonts.body, color: '#0a0a1e', fontSize: 12, fontWeight: '700' },
-  fabWrap: { position: 'absolute', right: 16, bottom: 68 },
 });

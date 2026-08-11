@@ -13,7 +13,6 @@ import { getPlaceContext } from '../utils/locationContext';
 import { ttsService } from '../services/ttsService';
 import { useHoldToSpeak } from '../hooks/useHoldToSpeak';
 import { InputBar, MicMode } from '../components/InputBar';
-import { SafetyFAB } from '../components/SafetyFAB';
 
 export interface CardResultScreenProps {
   locale: Locale;
@@ -23,7 +22,7 @@ export interface CardResultScreenProps {
 /**
  * 02 表达卡 · 成卡结果（DESIGN-v2.1.pen 02 屏）。
  * 聊天式双气泡：我的表达（ask）右、对方回话（reply）左 + 建议回复区；
- * 底部输入栏（MicBtn 点按切换 我说/对方说，按住说话）+ 安全链接 + SafetyFAB。
+ * 底部输入栏（MicBtn 点按切换 我说/对方说，按住说话）+ 安全链接。
  */
 export default function CardResultScreen({ locale, dispatch }: CardResultScreenProps) {
   const cards = useStore(cardStackStore, (s) => s.cards);
@@ -198,10 +197,6 @@ export default function CardResultScreen({ locale, dispatch }: CardResultScreenP
         <Text style={styles.safetyIcon}>›</Text>
       </TouchableOpacity>
 
-      {/* SafetyFAB → 08 */}
-      <View style={styles.fabWrap}>
-        <SafetyFAB onPress={() => dispatch({ type: 'navigate', route: 'safetyDetail' })} />
-      </View>
     </SafeAreaView>
   );
 }
@@ -318,5 +313,4 @@ const styles = StyleSheet.create({
   },
   safetyIcon: { color: colors.accentGreen, fontSize: 14 },
   safetyText: { fontFamily: fonts.body, color: colors.accentGreen, fontSize: 12, fontWeight: '600' },
-  fabWrap: { position: 'absolute', right: 16, bottom: 68 },
 });

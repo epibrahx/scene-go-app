@@ -5,6 +5,8 @@
 > **适用版本**：SceneGo iOS React Native (Expo SDK 51 / RN 0.74)  
 > **核心承诺**：秒级成卡、精准表达、双语国际化 (zh-Hans/en)、安全门禁闭环、无客户端 Key 风险。
 
+> **2026-08-11 自用化更新**：以下正文记录的"打包门禁"设施（`scripts/assert-production-config.ts`、`scripts/scan-production-bundle.ts` 及 `runtimeConfig.ts` 运行时生产检查）已按自用需求删除——自用阶段无上架风险，`runtimeConfig` 仅保留环境判定与 `isProduction` 选路。上架前需恢复本节设施。
+
 ---
 
 ## 一、 系统架构全景 (System Architecture)

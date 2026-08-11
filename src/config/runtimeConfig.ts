@@ -1,5 +1,3 @@
-import { AppError } from '../errors/AppError';
-
 export type RuntimeEnvironment = 'development' | 'preview' | 'production';
 
 export interface RuntimeConfig {
@@ -10,50 +8,21 @@ export interface RuntimeConfig {
 
 export type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
-const CLIENT_KEY_NAMES = [
-  'EXPO_PUBLIC_OPENROUTER_API_KEY',
-  'EXPO_PUBLIC_OPENAI_API_KEY',
-  'EXPO_PUBLIC_AI_API_KEY',
-] as const;
-
 function parseEnvironment(value: string | undefined): RuntimeEnvironment {
   const normalized = value?.trim().toLowerCase();
   if (!normalized || normalized === 'development') return 'development';
   if (normalized === 'preview' || normalized === 'production') return normalized;
-  throw new AppError('config', `Unsupported runtime environment: ${value}`);
-}
-
-function parseUrl(value: string): URL {
-  try {
-    return new URL(value);
-  } catch (cause) {
-    throw new AppError('config', 'AI proxy URL is invalid', { cause });
-  }
-}
-
-function isLocalHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
+  throw new Error(`Unsupported runtime environment: ${value}`);
 }
 
 export function createRuntimeConfig(env: RuntimeEnv = process.env): RuntimeConfig {
-  const environment = parseEnvironment(env.EXPO_PUBLIC_APP_ENV ?? env.APP_ENV ?? env.NODE_ENV);
+  // 环境只由显式 EXPO_PUBLIC_APP_ENV / APP_ENV 决定。
+  // 不能回退 NODE_ENV：Release bundle 里 Babel 会把 process.env.NODE_ENV 内联为
+  // 'production'，导致任何本地 Release 构建（模拟器/真机自测）被误判为生产环境。
+  // 自用阶段不做生产门禁检查（代理 URL/客户端 Key 等断言）；上架时需恢复
+  // scripts/assert-production-config.ts 的构建期断言。
+  const environment = parseEnvironment(env.EXPO_PUBLIC_APP_ENV ?? env.APP_ENV);
   const aiProxyUrl = (env.EXPO_PUBLIC_AI_PROXY_URL ?? env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim();
-
-  if (environment === 'production') {
-    if (!aiProxyUrl) throw new AppError('config', 'Production requires an AI proxy URL');
-    const url = parseUrl(aiProxyUrl);
-    if (url.protocol !== 'https:') throw new AppError('config', 'Production AI proxy must use HTTPS');
-    if (isLocalHost(url.hostname)) throw new AppError('config', 'Production AI proxy cannot use localhost');
-    if (url.username || url.password) throw new AppError('config', 'Production AI proxy cannot contain client credentials');
-    if (url.hostname.toLowerCase() === 'openrouter.ai' || url.hostname.toLowerCase().endsWith('.openrouter.ai')) {
-      throw new AppError('config', 'Production must use the SceneGo-owned proxy, not OpenRouter');
-    }
-    if (CLIENT_KEY_NAMES.some((name) => Boolean(env[name]?.trim()))) {
-      throw new AppError('config', 'Production cannot expose an AI provider key to the client');
-    }
-  }
-
   return { environment, aiProxyUrl, isProduction: environment === 'production' };
 }
 

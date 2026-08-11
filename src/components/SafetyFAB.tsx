@@ -1,58 +1,43 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
-import { colors, radii, fonts } from '../theme/tokens';
-import { Locale, translate } from '../i18n';
-import { AppAction } from '../app/appReducer';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { colors, radii } from '../theme/tokens';
 
 export interface SafetyFABProps {
-  locale: Locale;
-  dispatch: React.Dispatch<AppAction>;
+  onPress: () => void;
 }
 
-export function SafetyFAB({ locale, dispatch }: SafetyFABProps) {
-  const onPress = () => {
-    dispatch({ type: 'navigate', route: 'safety' });
-  };
-
+/**
+ * 全局安全悬浮球（DESIGN-v2.1.pen SafetyFAB 组件）。
+ * 56px 红圆；无 SVG 库，以「安」字替代 shield 图标（红线：图标用文字）。
+ */
+export function SafetyFAB({ onPress }: SafetyFABProps) {
   return (
     <TouchableOpacity
       style={styles.fab}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={translate(locale, 'safetyUI.title')}
-      accessibilityHint={translate(locale, 'screens.safety.description')}
+      accessibilityLabel="安全"
     >
-      <View style={styles.content}>
-        <Text style={styles.icon}>🛡️</Text>
-      </View>
+      <Text style={styles.icon}>安</Text>
+      <Text style={styles.badge}>安全</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   fab: {
-    position: 'absolute',
-    bottom: 120, // Above tab bar/input composer
-    right: 20,
     width: 56,
     height: 56,
+    backgroundColor: colors.accentRed,
     borderRadius: radii.r28,
-    backgroundColor: colors.bgCardLight,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
-    borderColor: colors.borderLight,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
-  content: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  icon: {
-    fontSize: 24,
-  },
+  icon: { color: '#ffffff', fontSize: 18, fontWeight: '700', lineHeight: 20 },
+  badge: { color: '#ffffff', fontSize: 8, fontWeight: '500', marginTop: 1 },
 });

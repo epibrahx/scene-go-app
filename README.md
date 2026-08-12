@@ -50,17 +50,17 @@ Recognition pipeline: snapshot → cloud recognition → structured `ScenarioRes
 
 ## Quick Start
 
-Requirements: Node 18+, Bun or npm, Xcode (iOS) with CocoaPods.
+Requirements: Node 22+, Bun, Xcode (iOS) with CocoaPods. Toolchain managed via [mise](https://mise.jdx.dev) (see `.mise.toml`).
 
 ```bash
 # install dependencies
-bun install            # or: npm install
+bun install
 
-# iOS (native module autolinking, builds dev client)
-npx expo run:ios
+# iOS (CNG: prebuild regenerates ios/, autolinks native modules, builds dev client)
+bunx expo run:ios
 
 # or just Metro for Expo Go / web
-npx expo start
+bunx expo start
 ```
 
 ### Environment variables
@@ -80,7 +80,8 @@ The API key and gateway URL are supplied at build time. Configure `EXPO_PUBLIC_O
 ```text
 scenego/
 ├── App.tsx                     # Entry: fonts + engine init, renders MainPage
-├── app.json                    # Expo config, permissions, plugins
+├── app.json                    # Expo config, permissions, plugins (唯一配置来源, CNG)
+├── .mise.toml                  # 工具链锁定 (node/bun/ruby)
 ├── modules/
 │   └── scenego-speech/         # Expo Local Module (Swift)
 │       ├── expo-module.config.json
@@ -94,10 +95,11 @@ scenego/
 │   │   └── ocr/
 │   └── utils/                  # NativeSpeech, SessionStore, NoteStore,
 │                               # SecureConfig (build env), ApiLogger
-├── ios/                        # Expo prebuild output (custom native)
 ├── docs/                       # PRD, architecture, strategy
 └── .env.example                # env template
 ```
+
+> CNG（Continuous Native Generation）：`ios/` / `android/` 为 prebuild 生成产物，不提交 git；改动原生配置一律编辑 `app.json` 后重新 `bunx expo prebuild`。
 
 ## Native Module
 
@@ -105,8 +107,8 @@ scenego/
 
 ## Tech Stack
 
-- Expo SDK 51 / React Native 0.74 (TypeScript)
-- expo-modules-core (Swift local module), expo-camera, expo-speech, expo-location, expo-file-system
+- Expo SDK 57 / React Native 0.86 (TypeScript)
+- expo-modules-core (Swift local module), expo-camera, expo-speech, expo-location, expo-file-system, expo-splash-screen
 - AsyncStorage (sessions & notes)
 - OpenRouter chat completions API for vision
 

@@ -1,9 +1,7 @@
 import { getOpenRouterApiKey } from './SecureConfig';
 import { apiLogger } from './ApiLogger';
-import { createRuntimeConfig } from '../config/runtimeConfig';
 import { AppError, toAppError } from '../errors/AppError';
 
-const runtimeConfig = createRuntimeConfig();
 const DEFAULT_GATEWAY_URL = 'https://openrouter.ai/api/v1/chat/completions';
 export const AI_GATEWAY_URL = process.env.EXPO_PUBLIC_AI_GATEWAY_URL || DEFAULT_GATEWAY_URL;
 export const DEFAULT_MODEL = 'openrouter/free';
@@ -108,24 +106,19 @@ async function postWithTimeoutRetry(
 export async function chatCompletions(req: AiChatRequest): Promise<AiChatResult> {
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
   
-  let url = AI_GATEWAY_URL;
-  let headers: Record<string, string> = {
+  const url = AI_GATEWAY_URL;
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'HTTP-Referer': 'https://scenego.app',
     'X-OpenRouter-Title': 'SceneGo',
     'X-Request-Id': requestId
   };
 
-  if (runtimeConfig.isProduction) {
-    // production mode: proxy adds its own keys
-    url = runtimeConfig.aiProxyUrl + '/v1/chat/completions';
-  } else {
-    const apiKey = await getOpenRouterApiKey();
-    if (!apiKey) {
-      throw new AiGatewayError('NOT_CONFIGURED', '未配置 OpenRouter API Key');
-    }
-    headers['Authorization'] = `Bearer ${apiKey}`;
+  const apiKey = await getOpenRouterApiKey();
+  if (!apiKey) {
+    throw new AiGatewayError('NOT_CONFIGURED', '未配置 OpenRouter API Key');
   }
+  headers['Authorization'] = `Bearer ${apiKey}`;
 
   const model = req.model || DEFAULT_MODEL;
   const body = JSON.stringify({

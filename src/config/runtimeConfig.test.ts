@@ -11,10 +11,7 @@ describe('runtimeConfig', () => {
 
   test('distinguishes explicit runtime environments', () => {
     expect(createRuntimeConfig({ EXPO_PUBLIC_APP_ENV: 'preview' }).environment).toBe('preview');
-    expect(createRuntimeConfig({
-      EXPO_PUBLIC_APP_ENV: 'production',
-      EXPO_PUBLIC_AI_PROXY_URL: 'https://api.scenego.app/ai',
-    }).isProduction).toBe(true);
+    expect(createRuntimeConfig({ EXPO_PUBLIC_APP_ENV: 'production' }).isProduction).toBe(true);
     expect(createRuntimeConfig({}).isProduction).toBe(false);
   });
 });

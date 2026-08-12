@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Locale } from '../i18n';
@@ -19,6 +19,7 @@ export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreen
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
 
   const take = async () => {
     if (busyRef.current) return;
@@ -27,6 +28,7 @@ export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreen
       return;
     }
     busyRef.current = true;
+    setBusy(true);
     try {
       const photo = await cameraRef.current?.takePictureAsync({ quality: 0.8 });
       if (photo?.uri) {
@@ -35,6 +37,7 @@ export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreen
       }
     } finally {
       busyRef.current = false;
+      setBusy(false);
     }
   };
 
@@ -70,6 +73,7 @@ export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreen
         <Pressable
           style={styles.shutterOuter}
           onPress={() => void take()}
+          disabled={busy}
           accessibilityRole="button"
           accessibilityLabel="拍照"
         >
@@ -77,7 +81,7 @@ export default function CameraScreen({ dispatch, onPhotoCaptured }: CameraScreen
         </Pressable>
       </SafeAreaView>
 
-      {busyRef.current ? <ActivityIndicator style={styles.busy} color={colors.textPrimary} /> : null}
+      {busy ? <ActivityIndicator style={styles.busy} color={colors.textPrimary} /> : null}
     </View>
   );
 }

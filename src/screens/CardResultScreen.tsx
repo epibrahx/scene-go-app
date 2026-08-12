@@ -115,16 +115,18 @@ export default function CardResultScreen({ locale, dispatch }: CardResultScreenP
       {/* CardWrap */}
       <View style={styles.cardWrap}>
         {/* 我方表达（ask）：右 */}
-        <View style={styles.rowEnd}>
-          <Bubble
-            who={translate(locale, 'card02.whoMine')}
-            targetText={card.targetText}
-            phonetic={card.phonetic}
-            zhText={card.subText}
-            onPlay={() => void speak(card.targetText, card.languageCode)}
-            onPress={() => dispatch({ type: 'navigate', route: 'presentation' })}
-          />
-        </View>
+        {!isReply ? (
+          <View style={styles.rowEnd}>
+            <Bubble
+              who={translate(locale, 'card02.whoMine')}
+              targetText={card.targetText}
+              phonetic={card.phonetic}
+              zhText={card.subText}
+              onPlay={() => void speak(card.targetText, card.languageCode)}
+              onPress={() => dispatch({ type: 'navigate', route: 'presentation' })}
+            />
+          </View>
+        ) : null}
 
         {/* 对方回话（reply）：左 */}
         {isReply ? (

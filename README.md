@@ -68,11 +68,12 @@ npx expo start
 Create a `.env` file (`.env.example` committed as a template):
 
 ```env
-# OpenRouter API key for cloud vision recognition
+# OpenRouter API key for cloud vision recognition in all environments
 EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-v1-...
+EXPO_PUBLIC_AI_GATEWAY_URL=https://openrouter.ai/api/v1/chat/completions
 ```
 
-The API key is supplied at build time through `EXPO_PUBLIC_OPENROUTER_API_KEY`.
+The API key and gateway URL are supplied at build time. Configure `EXPO_PUBLIC_OPENROUTER_API_KEY` as an EAS secret for preview and production builds; do not commit the key to the repository. The gateway URL defaults to OpenRouter and can be overridden with `EXPO_PUBLIC_AI_GATEWAY_URL` when needed.
 
 ## Project Layout
 

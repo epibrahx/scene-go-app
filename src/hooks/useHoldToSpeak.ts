@@ -34,9 +34,13 @@ export function useHoldToSpeak(): HoldToSpeak {
     const unsubFinal = speechController.onFinal((t) => {
       finalRef.current = t;
     });
+    const unsubPartial = speechController.onPartial((t) => {
+      partialRef.current = t;
+    });
     const unsubError = speechController.onError(() => {});
     unsubRef.current = () => {
       unsubFinal();
+      unsubPartial();
       unsubError();
     };
     try {
@@ -59,6 +63,8 @@ export function useHoldToSpeak(): HoldToSpeak {
     if (sessionId) {
       try {
         await speechController.stop(sessionId);
+        // Native speech recognition may emit the final result after stop resolves.
+        await new Promise((resolve) => setTimeout(resolve, 900));
       } catch {
         // 停止失败不阻塞取转录
       }

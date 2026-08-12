@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useStore } from 'zustand';
 import { cardStackStore } from '../core/cardStackStore';
+import { chatSessionStore } from '../core/chatSession';
 import { expressionEngine } from '../core/expressionEngine';
 import { Locale, translate } from '../i18n';
 import { AppAction } from '../app/appReducer';
@@ -50,7 +51,8 @@ export default function PhotoResultScreen({ locale, dispatch, photoUri }: PhotoR
     setLoading(true);
     setFailed(false);
     try {
-      const { card: analyzed } = await expressionEngine.processImage(photoUri);
+      const { card: analyzed, scenario } = await expressionEngine.processImage(photoUri);
+      chatSessionStore.getState().start(photoUri, scenario);
       add(analyzed);
     } catch {
       setFailed(true);

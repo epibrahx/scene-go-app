@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#09090b"
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -46,7 +41,16 @@
     },
     "plugins": [
       "./plugins/withResetAutoSigning",
-      "expo-font"
+      "expo-font",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#09090b"
+        }
+      ]
     ]
   }
 }

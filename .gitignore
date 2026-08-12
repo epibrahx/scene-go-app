@@ -33,6 +33,6 @@ yarn-error.log*
 .env.*.local
 
 # CNG 生成的原生工程（prebuild 按需生成，不提交）
-ios/
-android/
+/ios/
+/android/
 *.xcworkspace

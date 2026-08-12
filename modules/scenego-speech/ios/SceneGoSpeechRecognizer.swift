@@ -107,8 +107,19 @@ public class SceneGoSpeechRecognizer: Module {
     recognitionRequest = request
 
     let inputNode = audioEngine.inputNode
-    // 不做 inputFormat sampleRate 预检：engine 未启动时该值在部分真机上为 0，会误判无输入设备；
-    // 实际无输入/权限问题时 audioEngine.start() 会给出准确错误
+    // 不直接使用 inputNode.outputFormat(forBus:0)：engine 未启动时该值在模拟器/部分设备上
+    // 采样率或声道数为 0/无效，installTap 会因 IsFormatSampleRateAndChannelCountValid 断言
+    // 抛 ObjC 异常崩溃。改为用 audioSession 的有效采样率构造确定的 mono Float32 格式。
+    let sampleRate = audioSession.sampleRate > 0 ? audioSession.sampleRate : 48000
+    guard let recordingFormat = AVAudioFormat(
+      commonFormat: .pcmFormatFloat32,
+      sampleRate: sampleRate,
+      channels: 1,
+      interleaved: false
+    ) else {
+      promise.reject("format_error", "Invalid recording format")
+      return
+    }
 
     recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
       guard let self else { return }
@@ -138,7 +149,6 @@ public class SceneGoSpeechRecognizer: Module {
       }
     }
 
-    let recordingFormat = inputNode.outputFormat(forBus: 0)
     inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
       self?.recognitionRequest?.append(buffer)
     }

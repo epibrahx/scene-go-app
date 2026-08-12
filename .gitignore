@@ -32,7 +32,7 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# iOS build artifacts
-ios/Pods/
-ios/build/
+# CNG 生成的原生工程（prebuild 按需生成，不提交）
+ios/
+android/
 *.xcworkspace
